@@ -2,6 +2,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "lib/dialect/MoonOps.h"
 
 using namespace mbt;
 using namespace mlir;
@@ -15,6 +16,7 @@ CGModule::CGModule(MLIRContext &ctx):
   registry.insert<func::FuncDialect>();
   registry.insert<arith::ArithDialect>();
   registry.insert<scf::SCFDialect>();
+  registry.insert<mir::MoonDialect>();
 
   ctx.appendDialectRegistry(registry);
   ctx.loadAllAvailableDialects();
@@ -143,9 +145,10 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
   }
 
   if (auto varDecl = dyn_cast<VarDeclNode>(node)) {
+    auto loc = getLoc(node);
     auto value = emitExpr(varDecl->init);
     symbolTable[varDecl->name] = value;
-    return mlir::TupleType::get({});
+    return builder.create<mir::GetUnitOp>(loc);
   }
 
   return emitExpr(node);

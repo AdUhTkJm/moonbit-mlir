@@ -1,4 +1,4 @@
-#include "diagnostics.h"
+#include "Diagnostics.h"
 
 using namespace mbt;
 

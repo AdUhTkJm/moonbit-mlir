@@ -1,6 +1,6 @@
 set(PARSE_SOURCES
-  lexer.cpp
-  parser.cpp
+  Lexer.cpp
+  Parser.cpp
 )
 
 add_library(ParseLib STATIC ${PARSE_SOURCES})

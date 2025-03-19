@@ -1,5 +1,5 @@
 set(TBLGEN_SOURCES
-  diagnostics.cpp
+  Diagnostics.cpp
 )
 
 add_library(UtilsLib STATIC ${TBLGEN_SOURCES})

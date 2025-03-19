@@ -1,21 +1,19 @@
-set(DIALECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(MLIR_INCLUDE_DIRS ${MLIR_INCLUDE_DIRS} ${DIALECT_DIR})
+set(LLVM_TARGET_DEFINITIONS MoonOps.td)
+mlir_tablegen(MoonOps.h.inc -gen-op-decls)
+mlir_tablegen(MoonOps.cpp.inc -gen-op-defs)
+mlir_tablegen(MoonTypes.h.inc -gen-typedef-decls -typedefs-dialect=moon)
+mlir_tablegen(MoonTypes.cpp.inc -gen-typedef-defs -typedefs-dialect=moon)
+mlir_tablegen(MoonDialect.h.inc -gen-dialect-decls -dialect=moon)
+mlir_tablegen(MoonDialect.cpp.inc -gen-dialect-defs -dialect=moon)
+add_public_tablegen_target(MLIRMoonOpsIncGen)
+add_dependencies(mlir-headers MLIRMoonOpsIncGen)
 
-# Add your dialect files
-add_mlir_dialect(MoonIR ${DIALECT_DIR})
+add_mlir_doc(MoonDialect MoonDialect Moon/ -gen-dialect-doc)
 
-# Ensure TableGen files are generated
-mlir_tablegen(MoonIRDialectGen ${DIALECT_DIR}/MoonOps.td)
-mlir_tablegen(MoonIRTypesGen ${DIALECT_DIR}/MoonTypes.td)
-
-# Include generated files
-target_include_directories(moonc
-  PUBLIC
-  ${DIALECT_DIR}
-  ${CMAKE_BINARY_DIR}/include
-)
-
-# Register operations and types in the dialect
-add_mlir_library(MoonIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/moonir.cpp
+add_mlir_dialect_library(MLIRMoon
+  MoonDialect.cpp
+  MoonOps.cpp
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/dialect
+  LINK_LIBS PUBLIC
 )

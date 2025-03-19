@@ -1,10 +1,10 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
-#include "lib/parse/parser.h"
-#include "lib/utils/diagnostics.h"
-#include "lib/codegen/cgmodule.h"
-#include "lib/sema/sema.h"
+#include "lib/parse/Parser.h"
+#include "lib/utils/Diagnostics.h"
+#include "lib/codegen/CGModule.h"
+#include "lib/sema/Sema.h"
 #include <fstream>
 #include <sstream>
 
