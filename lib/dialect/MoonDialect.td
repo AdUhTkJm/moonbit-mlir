@@ -7,6 +7,11 @@ def MoonDialect : Dialect {
   let name = "moon";
   let summary = "Moonbit-specific MLIR dialect";
   let cppNamespace = "::mir";
+
+  let useDefaultTypePrinterParser = 1;
+  
+  // Enable when we have attributes.
+  // let useDefaultAttributePrinterParser = 1;
 }
 
 #endif

@@ -168,9 +168,9 @@ Type *TypeInferrer::infer(ASTNode *node) {
     
     // For empty block.
     if (!lastType)
-      return new UnitType();
+      return node->type = new UnitType();
     
-    return lastType;
+    return node->type = lastType;
   }
 
   assert(false);

@@ -17,3 +17,5 @@ add_mlir_dialect_library(MLIRMoon
   ${PROJECT_SOURCE_DIR}/dialect
   LINK_LIBS PUBLIC
 )
+
+link_libraries(MLIRParser)

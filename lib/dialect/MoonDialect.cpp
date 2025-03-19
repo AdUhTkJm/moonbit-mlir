@@ -23,4 +23,4 @@ void MoonDialect::initialize() {
       >();
 }
 
-} // namespace poly
+} // namespace mir

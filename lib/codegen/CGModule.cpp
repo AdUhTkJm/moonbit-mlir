@@ -8,10 +8,7 @@ using namespace mbt;
 using namespace mlir;
 
 CGModule::CGModule(MLIRContext &ctx):
-  ctx(ctx), builder(&ctx),
-  unitType(mlir::TupleType::get(&ctx, {})),
-  boolType(mlir::IntegerType::get(&ctx, 1))
-{
+  ctx(ctx), builder(&ctx) {
   mlir::DialectRegistry registry;
   registry.insert<func::FuncDialect>();
   registry.insert<arith::ArithDialect>();
@@ -20,6 +17,10 @@ CGModule::CGModule(MLIRContext &ctx):
 
   ctx.appendDialectRegistry(registry);
   ctx.loadAllAvailableDialects();
+
+  // Initialize type cache.
+  unitType = mir::UnitType::get(&ctx);
+  boolType = mlir::IntegerType::get(&ctx, 1);
 }
 
 StringAttr CGModule::getStringAttr(llvm::StringRef str) {
@@ -42,8 +43,8 @@ mlir::Type CGModule::getTy(mbt::Type *ty) {
     llvm::SmallVector<mlir::Type> paramTy;
     for (auto x : fnTy->paramTy)
       paramTy.push_back(getTy(x));
-    // check retTy
-    return mlir::FunctionType::get(&ctx, paramTy, {});
+    
+    return mlir::FunctionType::get(&ctx, paramTy, getTy(fnTy->retTy));
   }
 
   if (isa<mbt::UnitType>(ty))
@@ -63,21 +64,20 @@ mlir::Value CGModule::emitIfExpr(IfNode *ifexpr) {
   bool withElse = ifexpr->ifnot;
   
   // This `if` shouldn't return anything.
-  mbt::Type *ifTy = ifexpr->ifso->type;
-  auto op = builder.create<scf::IfOp>(loc, getTy(ifTy), cond, withElse);
+  auto op = builder.create<scf::IfOp>(loc, getTy(ifexpr->type), cond, withElse);
 
   {
     // Generate if-branch.
     OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(op.getBody());
-    mlir::Value val = emitExpr(ifexpr->ifso);
+    mlir::Value val = emitStmt(ifexpr->ifso);
     builder.create<scf::YieldOp>(loc, val);
   }
   if (withElse) {
     // Generate else-branch.
     OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&op.getElseRegion().front());
-    mlir::Value val = emitExpr(ifexpr->ifso);
+    mlir::Value val = emitStmt(ifexpr->ifnot);
     builder.create<scf::YieldOp>(loc, val);
   }
   return op.getResult(0);
@@ -165,7 +165,7 @@ void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
   builder.setInsertionPointToStart(funcOp.addEntryBlock());
 
   mlir::Value value = emitStmt(globalFn->body);
-  builder.create<func::ReturnOp>(loc);
+  builder.create<func::ReturnOp>(loc, value);
 }
 
 void CGModule::emitModule(ASTNode *n) {
@@ -179,7 +179,5 @@ void CGModule::emitModule(ASTNode *n) {
 }
 
 void CGModule::dump() {
-  theModule.print(llvm::errs());
-  if (theModule.verify().failed())
-    llvm::errs() << "Bad!\n";
+  theModule.dump();
 }

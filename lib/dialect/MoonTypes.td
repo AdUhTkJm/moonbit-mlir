@@ -4,7 +4,6 @@
 include "MoonDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 
-// A base class for all types in this dialect
 class MoonType<string name, string typeMnemonic> : TypeDef<MoonDialect, name> {
   let mnemonic = typeMnemonic;
 }
