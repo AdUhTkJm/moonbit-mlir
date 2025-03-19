@@ -1,0 +1,6 @@
+add_subdirectory(codegen)
+add_subdirectory(dialect)
+add_subdirectory(main)
+add_subdirectory(parse)
+add_subdirectory(sema)
+add_subdirectory(utils)

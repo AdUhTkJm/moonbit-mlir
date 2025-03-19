@@ -1,0 +1,182 @@
+#include "CGModule.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+
+using namespace mbt;
+using namespace mlir;
+
+CGModule::CGModule(MLIRContext &ctx):
+  ctx(ctx), builder(&ctx),
+  unitType(mlir::TupleType::get(&ctx, {})),
+  boolType(mlir::IntegerType::get(&ctx, 1))
+{
+  mlir::DialectRegistry registry;
+  registry.insert<func::FuncDialect>();
+  registry.insert<arith::ArithDialect>();
+  registry.insert<scf::SCFDialect>();
+
+  ctx.appendDialectRegistry(registry);
+  ctx.loadAllAvailableDialects();
+}
+
+StringAttr CGModule::getStringAttr(llvm::StringRef str) {
+  return mlir::StringAttr::get(&ctx, str);
+}
+
+mlir::Location CGModule::getLoc(Location loc) {
+  return mlir::FileLineColLoc::get(getStringAttr(loc.filename), loc.line, loc.col);
+}
+
+mlir::Location CGModule::getLoc(ASTNode *node) {
+  return mlir::FusedLoc::get(&ctx, { getLoc(node->begin), getLoc(node->end) });
+}
+
+mlir::Type CGModule::getTy(mbt::Type *ty) {
+  if (auto intTy = dyn_cast<mbt::IntType>(ty))
+    return mlir::IntegerType::get(&ctx, intTy->width);
+
+  if (auto fnTy = dyn_cast<mbt::FunctionType>(ty)) {
+    llvm::SmallVector<mlir::Type> paramTy;
+    for (auto x : fnTy->paramTy)
+      paramTy.push_back(getTy(x));
+    // check retTy
+    return mlir::FunctionType::get(&ctx, paramTy, {});
+  }
+
+  if (isa<mbt::UnitType>(ty))
+    return unitType;
+
+  if (isa<mbt::BoolType>(ty))
+    return boolType;
+
+  llvm::errs() << ty->toString() << "\n";
+  assert(false && "NYI");
+}
+
+mlir::Value CGModule::emitIfExpr(IfNode *ifexpr) {
+  auto loc = getLoc(ifexpr);
+
+  mlir::Value cond = emitExpr(ifexpr->cond);
+  bool withElse = ifexpr->ifnot;
+  
+  // This `if` shouldn't return anything.
+  mbt::Type *ifTy = ifexpr->ifso->type;
+  auto op = builder.create<scf::IfOp>(loc, getTy(ifTy), cond, withElse);
+
+  {
+    // Generate if-branch.
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(op.getBody());
+    mlir::Value val = emitExpr(ifexpr->ifso);
+    builder.create<scf::YieldOp>(loc, val);
+  }
+  if (withElse) {
+    // Generate else-branch.
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&op.getElseRegion().front());
+    mlir::Value val = emitExpr(ifexpr->ifso);
+    builder.create<scf::YieldOp>(loc, val);
+  }
+  return op.getResult(0);
+}
+
+mlir::Value CGModule::emitBinaryExpr(BinaryNode *binary) {
+  auto loc = getLoc(binary);
+
+  mlir::Value l = emitExpr(binary->l);
+  mlir::Value r = emitExpr(binary->r);
+  switch (binary->op) {
+  case BinaryNode::Add:
+    return builder.create<arith::AddIOp>(loc, getTy(binary->type), l, r);
+  case BinaryNode::Sub:
+    return builder.create<arith::SubIOp>(loc, getTy(binary->type), l, r);
+  case BinaryNode::Mul:
+    return builder.create<arith::MulIOp>(loc, getTy(binary->type), l, r);
+  case BinaryNode::Div:
+    return builder.create<arith::DivSIOp>(loc, getTy(binary->type), l, r);
+  case BinaryNode::Mod:
+    return builder.create<arith::RemSIOp>(loc, getTy(binary->type), l, r);
+  case BinaryNode::Lt:
+    return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, l, r);
+  case BinaryNode::Gt:
+    return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, l, r);
+  case BinaryNode::Eq:
+    return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, l, r);
+  case BinaryNode::Ne:
+    return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, l, r);
+  default: ;
+  }
+  assert(false && "NYI");
+}
+
+mlir::Value CGModule::emitExpr(ASTNode *node) {
+  assert(node);
+
+  if (auto binary = dyn_cast<BinaryNode>(node))
+    return emitBinaryExpr(binary);
+
+  if (auto ifexpr = dyn_cast<IfNode>(node))
+    return emitIfExpr(ifexpr);
+
+  if (auto intLiteral = dyn_cast<IntLiteralNode>(node)) {
+    auto loc = getLoc(node);
+    int value = intLiteral->value;
+    auto op = builder.create<arith::ConstantIntOp>(loc, value, getTy(intLiteral->type));
+    return op;
+  }
+
+  if (auto var = dyn_cast<VarNode>(node))
+    return symbolTable[var->name];
+
+  assert(false && "NYI");
+}
+
+mlir::Value CGModule::emitStmt(ASTNode *node) {
+  assert(node);
+
+  if (auto block = dyn_cast<BlockNode>(node)) {
+    mlir::Value result;
+    for (auto x : block->body)
+      result = emitStmt(x);
+    return result;
+  }
+
+  if (auto varDecl = dyn_cast<VarDeclNode>(node)) {
+    auto value = emitExpr(varDecl->init);
+    symbolTable[varDecl->name] = value;
+    return mlir::TupleType::get({});
+  }
+
+  return emitExpr(node);
+}
+
+void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
+  // Resets builder's insertion point when destroyed.
+  OpBuilder::InsertionGuard guard(builder);
+
+  builder.setInsertionPointToEnd(theModule.getBody());
+  auto type = cast<mlir::FunctionType>(getTy(globalFn->type));
+  auto loc = getLoc(globalFn);
+  auto funcOp = builder.create<func::FuncOp>(loc, globalFn->name, type);
+  builder.setInsertionPointToStart(funcOp.addEntryBlock());
+
+  mlir::Value value = emitStmt(globalFn->body);
+  builder.create<func::ReturnOp>(loc);
+}
+
+void CGModule::emitModule(ASTNode *n) {
+  theModule = ModuleOp::create(getLoc(n));
+  auto toplevels = cast<BlockNode>(n);
+  for (auto one : toplevels->body) {
+    if (auto fndecl = dyn_cast<FnDeclNode>(one)) {
+      emitGlobalFn(fndecl);
+    }
+  }
+}
+
+void CGModule::dump() {
+  theModule.print(llvm::errs());
+  if (theModule.verify().failed())
+    llvm::errs() << "Bad!\n";
+}

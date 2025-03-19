@@ -1,0 +1,166 @@
+#include "Lexer.h"
+#include <format>
+#include <map>
+#include <cmath>
+
+using namespace mbt;
+
+std::map<std::string, Token::Type> keywords = {
+  { "if", Token::If },
+  { "else", Token::Else },
+  { "let", Token::Let },
+  { "while", Token::While },
+  { "for", Token::For },
+  { "fn", Token::Fn },
+  { "return", Token::Return },
+};
+
+Tokenizer::Tokenizer(const std::string &filename, const std::string& input):
+  input(input), filename(filename), loc(0), last_line(0), line(1) {}
+
+Token::Token(Type t, Location begin, int len):
+  ty(t), begin(begin), end(begin) {
+  end.col = begin.col + len;
+}
+
+Token::Token(Type t, std::string name, Location begin):
+  ty(t), vs(name), begin(begin), end(begin) {
+  end.col = begin.col + name.length();
+}
+
+Token::Token(Type t, int vi, Location begin, int len):
+  ty(t), vi(vi), begin(begin), end(begin) {
+  end.col = begin.col + len;
+}
+
+Token Tokenizer::nextToken() {
+  assert(loc < input.size());
+
+  // Skip whitespace
+  while (loc < input.size() && std::isspace(input[loc])) {
+    if (input[loc] == '\n')
+      last_line = loc, line++;
+    loc++;
+  }
+
+  // Hit end of input because of skipping whitespace
+  if (loc >= input.size()) {
+    return Token(Token::End, Location { filename, line, input.size() - last_line }, 0);
+  }
+
+  char c = input[loc];
+  Location curr_loc = Location { filename, line, loc - last_line };
+
+  // Identifiers and keywords
+  if (std::isalpha(c)) {
+    std::string name;
+    while (loc < input.size() && (std::isalnum(input[loc]) || input[loc] == '_')) {
+      name += input[loc++];
+    }
+    if (keywords.contains(name))
+      return Token(keywords[name], curr_loc, name.length());
+    return Token(Token::Ident, name, curr_loc);
+  }
+
+  // Integer literals
+  if (std::isdigit(c)) {
+    int value = 0;
+    int last_loc = loc;
+    while (loc < input.size() && std::isdigit(input[loc])) {
+      // Overflow.
+      if (value > 214748364 || (value == 214748364 && input[loc] >= '8')) {
+        auto from_loc = Location { filename, line, last_loc - last_line };
+        Diagnostics::error(from_loc, curr_loc, std::format("overflowing literal"));
+      }
+      value = value * 10 + (input[loc++] - '0');
+    }
+    return Token(Token::IntLit, value, curr_loc, loc - last_loc);
+  }
+
+  // Check for multi-character operators like >=, <=, ==, !=, +=, etc.
+  if (loc + 1 < input.size()) {
+    switch (c) {
+    case '=': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::Eq, curr_loc, 2); }
+      break;
+    case '>':
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::Ge, curr_loc, 2); }
+      break;
+    case '<': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::Le, curr_loc, 2); }
+      break;
+    case '!': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::Ne, curr_loc, 2); }
+      break;
+    case '+': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::PlusEq, curr_loc, 2); }
+      break;
+    case '-': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::MinusEq, curr_loc, 2); }
+      if (input[loc + 1] == '>') { loc += 2; return Token(Token::Arrow, curr_loc, 2); }
+      break;
+    case '*': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::MulEq, curr_loc, 2); }
+      break;
+    case '/': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::DivEq, curr_loc, 2); }
+      if (input[loc + 1] == '/') { 
+        // Loop till we find a line break, then retries to find the next Token
+        // (we can't continue working in the same function frame)
+        for (; loc < input.size(); loc++) {
+          if (input[loc] == '\n')
+            return nextToken();
+        }
+      }
+      break;
+    case '&': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::BitAndEq, curr_loc, 2); }
+      if (input[loc + 1] == '&') { loc += 2; return Token(Token::And, curr_loc, 2); }
+      break;
+    case '|': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::BitOrEq, curr_loc, 2); }
+      if (input[loc + 1] == '|') { loc += 2; return Token(Token::Or, curr_loc, 2); }
+      break;
+    case '^': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::XorEq, curr_loc, 2); }
+      break;
+    default: break;
+    }
+  }
+
+  // Single-character operators and symbols
+  switch (c) {
+  case '+': loc++; return Token(Token::Plus, curr_loc, 1);
+  case '-': loc++; return Token(Token::Minus, curr_loc, 1);
+  case '*': loc++; return Token(Token::Mul, curr_loc, 1);
+  case '/': loc++; return Token(Token::Div, curr_loc, 1);
+  case '%': loc++; return Token(Token::Div, curr_loc, 1);
+  case '&': loc++; return Token(Token::BitAnd, curr_loc, 1);
+  case '|': loc++; return Token(Token::BitOr, curr_loc, 1);
+  case '^': loc++; return Token(Token::Xor, curr_loc, 1);
+  case ';': loc++; return Token(Token::Semicolon, curr_loc, 1);
+  case ':': loc++; return Token(Token::Colon, curr_loc, 1);
+  case '=': loc++; return Token(Token::Assign, curr_loc, 1);
+  case '!': loc++; return Token(Token::Exclaim, curr_loc, 1);
+  case '(': loc++; return Token(Token::LPar, curr_loc, 1);
+  case ')': loc++; return Token(Token::RPar, curr_loc, 1);
+  case '[': loc++; return Token(Token::LBrak, curr_loc, 1);
+  case ']': loc++; return Token(Token::RBrak, curr_loc, 1);
+  case '<': loc++; return Token(Token::Lt, curr_loc, 1);
+  case '>': loc++; return Token(Token::Gt, curr_loc, 1);
+  case ',': loc++; return Token(Token::Comma, curr_loc, 1);
+  case '{': loc++; return Token(Token::LBrace, curr_loc, 1);
+  case '}': loc++; return Token(Token::RBrace, curr_loc, 1);
+  default:
+    Diagnostics::error(curr_loc, curr_loc, std::format("unexpected character: {}", c));
+    loc++; return nextToken();
+  }
+}
+
+bool Tokenizer::hasMore() const {
+  return loc < input.size();
+}
+
+const char *mbt::stringifyToken(Token t) {
+  return Token::type_names[(int) t.ty];
+}
