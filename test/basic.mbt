@@ -1,3 +1,7 @@
+fn func(x: Int) -> Int {
+  x;
+}
+
 fn main {
   let x = 1 + 2 * 3
   let y = 2

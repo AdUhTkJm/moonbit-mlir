@@ -1,6 +1,7 @@
 set(PARSE_SOURCES
   Lexer.cpp
   Parser.cpp
+  ASTNode.cpp
 )
 
 add_library(ParseLib STATIC ${PARSE_SOURCES})

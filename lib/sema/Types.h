@@ -70,6 +70,22 @@ public:
   std::string toString() override { return "bool"; }
 };
 
+// This is a user-defined type that we don't yet know about.
+// Parser will collect all information of known types,
+// and Sema will resolve them.
+class UnresolvedType : public Type {
+public:
+  constexpr static int typeKind = 6;
+
+  std::string name;
+  std::vector<std::string> typeArgs;
+  UnresolvedType() {
+    kind = typeKind;
+  }
+
+  std::string toString() override { return "<unresolved>"; }
+};
+
 template<class T>
 bool isa(Type *t) {
   assert(t);

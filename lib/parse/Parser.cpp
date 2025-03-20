@@ -46,6 +46,19 @@ bool Parser::test(Token::Type ty) {
   return false;
 }
 
+mbt::Type *Parser::parseType() {
+  if (test(Token::Int))
+    return new IntType();
+
+  if (test(Token::Bool))
+    return new BoolType();
+
+  consume();
+  Diagnostics::error(peek().begin, peek().end,
+    std::format("expected type, but got {}", stringifyToken(peek())));
+  return nullptr;
+}
+
 ASTNode *Parser::primary() {
   if (peek(Token::IntLit)) {
     auto tok = consume();
@@ -57,6 +70,7 @@ ASTNode *Parser::primary() {
     return new VarNode(tok.vs, tok.begin, tok.end);
   }
 
+  consume();
   Diagnostics::error(peek().begin, peek().end,
     std::format("unexpected token: {}", stringifyToken(peek())));
   return nullptr;
@@ -80,7 +94,7 @@ ASTNode *Parser::ifExpr() {
 ASTNode *Parser::compareExpr() {
   auto x = ifExpr();
   if (peek(Token::Le) || peek(Token::Ge) || peek(Token::Gt)
-      || peek(Token::Lt) || peek(Token::Ne) || peek(Token::Eq)) {
+   || peek(Token::Lt) || peek(Token::Ne) || peek(Token::Eq)) {
     Location begin = peek().begin;
     auto ty = consume().ty;
     auto next = ifExpr();
@@ -162,14 +176,24 @@ ASTNode *Parser::stmt() {
     
     // let x (: Type)? = Expr;
     auto name = expect(Token::Ident).vs;
+
+    // if there's no name, `expect` would have reported an error
+    if (name.length() != 0 && isupper(name[0]))
+      Diagnostics::error(last().begin, last().end,
+        "variable must start with a lower-case letter");
+
+    Type *ty = nullptr;
     if (test(Token::Colon))
-      assert(false && "NYI");
+      ty = parseType();
     expect(Token::Assign);
     auto init = expr();
     
     // Optional semicolon.
     test(Token::Semicolon);
-    return new VarDeclNode(name, init, begin, last().end);
+    
+    auto decl = new VarDeclNode(name, init, begin, last().end);
+    decl->type = ty;
+    return decl;
   }
 
   if (peek(Token::LBrace))
@@ -184,11 +208,44 @@ ASTNode *Parser::stmt() {
 ASTNode *Parser::topFn() {
   Location begin = last().begin; // 'fn'
   auto name = expect(Token::Ident).vs;
-  if (name != "main" && name != "init")
-    assert(false && "NYI");
+  
+  std::vector<VarDeclNode*> params;
+  std::vector<Type*> paramTy;
+  Type *fnTy = nullptr;
+  
+  // A normal function.
+  if (name != "main" && name != "init") {
+    expect(Token::LPar);
+    do {
+      auto begin = peek().begin;
+      auto paramName = expect(Token::Ident).vs;
+      // Type annotation is required.
+      expect(Token::Colon);
+      Type *ty = parseType();
+      paramTy.push_back(ty);
+      
+      auto decl = new VarDeclNode(paramName, nullptr, begin, last().end);
+      decl->type = ty;
+      params.push_back(decl);
+
+      if (test(Token::RPar))
+        break;
+      
+      if (!test(Token::Comma))
+        Diagnostics::error(peek().begin, peek().end, "expected ','");
+    } while (true);
+
+    // Return value is also required.
+    expect(Token::Arrow);
+    Type *retTy = parseType();
+    fnTy = new FunctionType(paramTy, retTy);
+  }
   
   auto body = blockStmt();
-  return new FnDeclNode(name, {}, body, begin, body->end);
+ 
+  auto fn = new FnDeclNode(name, params, body, begin, body->end);
+  fn->type = fnTy;
+  return fn;
 }
 
 ASTNode *Parser::toplevel() {

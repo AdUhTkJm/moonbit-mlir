@@ -13,6 +13,11 @@ std::map<std::string, Token::Type> keywords = {
   { "for", Token::For },
   { "fn", Token::Fn },
   { "return", Token::Return },
+  
+  // Internal types.
+  { "Int", Token::Int },
+  { "Bool", Token::Bool },
+  { "FixedArray", Token::FixedArray },
 };
 
 Tokenizer::Tokenizer(const std::string &filename, const std::string& input):

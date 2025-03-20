@@ -20,7 +20,16 @@ class TypeInferrer {
 
   Type *inferFn(FnDeclNode *fn);
   Type *inferIf(IfNode *ifexpr);
+  Type *inferVarDecl(VarDeclNode *decl);
   Type *inferBinary(BinaryNode *binary);
+
+  struct SemanticScope {
+    decltype(typeMap) oldMap;
+    TypeInferrer &inferrer;
+  public:
+    SemanticScope(TypeInferrer &inferrer);
+    ~SemanticScope();
+  };
 public:
   
   // This also updates the `type` field in ASTNode.

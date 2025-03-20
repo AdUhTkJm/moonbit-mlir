@@ -27,7 +27,7 @@ void Diagnostics::reportAll(bool exits) {
         std::cerr << lines[i - 1] << "\n";
     } else {
       assert(diag.to.col >= diag.from.col);
-      for (size_t i = 0; i <= diag.to.col - diag.from.col; ++i)
+      for (size_t i = 0; i < diag.to.col - diag.from.col; ++i)
         std::cerr << '^';
       std::cerr << "\n";
     }

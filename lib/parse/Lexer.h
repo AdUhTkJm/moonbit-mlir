@@ -21,6 +21,7 @@ public:
   X(Semicolon) X(Colon) X(Arrow) \
   X(Comma) X(LPar) X(RPar) X(LBrak) X(RBrak) X(LBrace) X(RBrace) \
   X(If) X(Else) X(Let) X(While) X(For) X(Fn) \
+  X(Int) X(Bool) X(FixedArray) \
   X(Return) \
   X(End)
 

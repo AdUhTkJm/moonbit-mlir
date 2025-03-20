@@ -3,6 +3,13 @@
 
 using namespace mbt;
 
+TypeInferrer::SemanticScope::SemanticScope(TypeInferrer &inferrer):
+  oldMap(inferrer.typeMap), inferrer(inferrer) { }
+
+TypeInferrer::SemanticScope::~SemanticScope() {
+  inferrer.typeMap = oldMap;
+}
+
 Type *TypeInferrer::fresh() {
   return new WeakType(id++);
 }
@@ -63,6 +70,8 @@ Type *TypeInferrer::repr(Type *ty) {
 }
 
 Type *TypeInferrer::inferFn(FnDeclNode *fn) {
+  SemanticScope scope(*this);
+
   std::vector<Type*> paramsTy;
   for (auto param : fn->params)
     paramsTy.push_back(infer(param));
@@ -126,7 +135,32 @@ Type *TypeInferrer::inferBinary(BinaryNode *binary) {
   }
 }
 
+Type *TypeInferrer::inferVarDecl(VarDeclNode *decl) {
+  // This is a function parameter.
+  if (!decl->init) {
+    if (decl->type)
+      return typeMap[decl->name] = decl->type;
+
+    return typeMap[decl->name] = decl->type = fresh();
+  }
+
+  Type *ty = infer(decl->init);
+  typeMap[decl->name] = ty;
+  if (decl->type && !unify(decl->type, ty)) {
+    Diagnostics::error(decl->begin, decl->end,
+      std::format("variable {} with type {} cannot accept this initializer (type {})",
+        decl->name, decl->type->toString(), ty->toString()));
+
+    return new UnitType();
+  }
+  decl->type = ty;
+  // Var declaration itself shouldn't have type.
+  return new UnitType();
+}
+
 Type *TypeInferrer::infer(ASTNode *node) {
+  assert(node);
+  
   if (auto var = dyn_cast<VarNode>(node)) {
     if (typeMap.contains(var->name))
       return var->type = typeMap[var->name];
@@ -134,20 +168,8 @@ Type *TypeInferrer::infer(ASTNode *node) {
     return var->type = fresh();
   }
 
-  if (auto varDecl = dyn_cast<VarDeclNode>(node)) {
-    Type *ty = infer(varDecl->init);
-    typeMap[varDecl->name] = ty;
-    if (varDecl->type && !unify(varDecl->type, ty)) {
-      Diagnostics::error(varDecl->begin, varDecl->end,
-        std::format("variable {} with type {} cannot accept this initializer (type {})",
-          varDecl->name, varDecl->type->toString(), ty->toString()));
-
-      return new UnitType();
-    }
-    varDecl->type = ty;
-    // Var declaration itself shouldn't have type.
-    return new UnitType();
-  }
+  if (auto decl = dyn_cast<VarDeclNode>(node))
+    return inferVarDecl(decl);
 
   if (auto binary = dyn_cast<BinaryNode>(node))
     return inferBinary(binary);
@@ -162,6 +184,8 @@ Type *TypeInferrer::infer(ASTNode *node) {
     return inferIf(ifexpr);
 
   if (auto block = dyn_cast<BlockNode>(node)) {
+    SemanticScope scope(*this);
+
     Type *lastType = nullptr;
     for (auto x : block->body)
       lastType = infer(x);
@@ -169,7 +193,7 @@ Type *TypeInferrer::infer(ASTNode *node) {
     // For empty block.
     if (!lastType)
       return node->type = new UnitType();
-    
+
     return node->type = lastType;
   }
 

@@ -31,6 +31,8 @@ class Parser {
   ASTNode *toplevel();
   ASTNode *topFn();
 
+  mbt::Type *parseType();
+
 public:
   Parser(const std::vector<Token> &tokens): tokens(tokens) {}
   ASTNode *parse();
