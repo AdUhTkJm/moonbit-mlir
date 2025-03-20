@@ -44,3 +44,7 @@ std::string IfNode::toString() const {
 std::string VarNode::toString() const {
   return std::format("var  {}: {}", name, type ? type->toString() : "<unknown>");
 }
+
+std::string IntrinsicNode::toString() const {
+  return std::format("intrinsic  {}", intrinsic);
+}

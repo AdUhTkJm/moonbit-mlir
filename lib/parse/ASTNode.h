@@ -71,6 +71,12 @@ public:
     Plus, Minus
   } op;
   ASTNode *child;
+
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+    walker(child);
+  }
   
   UnaryNode(Type op, ASTNode *child, Location begin, Location end):
     ASTNodeImpl(begin, end), op(op), child(child) {}
@@ -82,6 +88,12 @@ class VarDeclNode : public ASTNodeImpl<VarDeclNode, 3> {
 public:
   std::string name;
   ASTNode *init;
+  
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+  }
+
   VarDeclNode(llvm::StringRef name, ASTNode *init, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), init(init) {}
 
@@ -94,6 +106,15 @@ public:
   std::string name;
   ASTNode *body;
   std::vector<VarDeclNode*> params;
+
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+    for (auto node : params)
+      walker(node);
+    walker(body);
+  }
+
   FnDeclNode(llvm::StringRef name, const std::vector<VarDeclNode*> &params,
              ASTNode *body, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), body(body), params(params)  {}
@@ -105,6 +126,12 @@ class IntLiteralNode : public ASTNodeImpl<IntLiteralNode, 5> {
 public:
   constexpr static int nodeType = 5;
   int value;
+
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+  }
+
   IntLiteralNode(int value, Location begin, Location end):
     ASTNodeImpl(begin, end), value(value) {}
 
@@ -114,6 +141,14 @@ public:
 class BlockNode : public ASTNodeImpl<BlockNode, 6> {
 public:
   std::vector<ASTNode*> body;
+
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+    for (auto node : body)
+      walker(node);
+  }
+
   BlockNode(Location begin, Location end): ASTNodeImpl(begin, end) {}
 
   std::string toString() const override;
@@ -122,6 +157,12 @@ public:
 class VarNode : public ASTNodeImpl<VarNode, 7> {
 public:
   std::string name;
+
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+  }
+
   VarNode(std::string name, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name) {}
 
@@ -134,11 +175,34 @@ public:
   ASTNode *ifso;
   ASTNode *ifnot;
 
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+    walker(cond);
+    walker(ifso);
+    walker(ifnot);
+  }
+
   IfNode(ASTNode *cond, ASTNode *ifso, Location begin, Location end):
     ASTNodeImpl(begin, end), cond(cond), ifso(ifso), ifnot(nullptr) {}
 
   IfNode(ASTNode *cond, ASTNode *ifso, ASTNode *ifnot, Location begin, Location end):
     ASTNodeImpl(begin, end), cond(cond), ifso(ifso), ifnot(ifnot) {}
+
+  std::string toString() const override;
+};
+
+class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 8> {
+public:
+  std::string intrinsic;
+
+  template<class Fn>
+  void walkImpl(Fn &&walker) {
+    walker(this);
+  }
+  
+  IntrinsicNode(std::string name, Location begin, Location end):
+    ASTNodeImpl(begin, end), intrinsic(name) {}
 
   std::string toString() const override;
 };

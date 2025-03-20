@@ -18,7 +18,7 @@ Token Parser::expect(Token::Type ty) {
   auto tok = tokens[place];
   if (tok.ty != ty) {
     Diagnostics::error(tok.begin, tok.end,
-      std::format("expected {}, but got {}\n", Token::type_names[ty], stringifyToken(tok)));
+      std::format("expected {}, but got {}\n", stringifyToken(ty), stringifyToken(tok)));
   }
   place++;
   return tok;
@@ -52,6 +52,9 @@ mbt::Type *Parser::parseType() {
 
   if (test(Token::Bool))
     return new BoolType();
+
+  if (test(Token::Unit))
+    return new UnitType();
 
   consume();
   Diagnostics::error(peek().begin, peek().end,
@@ -240,9 +243,18 @@ ASTNode *Parser::topFn() {
     Type *retTy = parseType();
     fnTy = new FunctionType(paramTy, retTy);
   }
-  
-  auto body = blockStmt();
- 
+
+  mbt::ASTNode *body = nullptr;
+
+  // This is a builtin function:
+  //    fn println_mono(x : String) -> Unit = "%println"
+  if (test(Token::Assign)) {
+    auto builtin = expect(Token::StrLit).vs;
+    body = new IntrinsicNode(builtin, last().begin, last().end);
+  } else {
+    body = blockStmt();
+  }
+
   auto fn = new FnDeclNode(name, params, body, begin, body->end);
   fn->type = fnTy;
   return fn;

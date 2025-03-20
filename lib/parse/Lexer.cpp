@@ -18,6 +18,7 @@ std::map<std::string, Token::Type> keywords = {
   { "Int", Token::Int },
   { "Bool", Token::Bool },
   { "FixedArray", Token::FixedArray },
+  { "Unit", Token::Unit },
 };
 
 Tokenizer::Tokenizer(const std::string &filename, const std::string& input):
@@ -36,6 +37,26 @@ Token::Token(Type t, std::string name, Location begin):
 Token::Token(Type t, int vi, Location begin, int len):
   ty(t), vi(vi), begin(begin), end(begin) {
   end.col = begin.col + len;
+}
+
+char Tokenizer::escaped(char esc) {
+  switch (esc) {
+  case 'n': return '\n';
+  case 't': return '\t';
+  case '"': return '"';
+  case '\\': return '\\';
+  case 'r': return '\r';
+  case 'b': return '\b';
+  case 'f': return '\f';
+  case 'v': return '\v';
+  default:
+    Diagnostics::error(
+      Location { filename, line, loc - 1 - last_line },
+      Location { filename, line, loc - last_line + 1 },
+      std::format("invalid escape sequence '\\{}'", esc)
+    );
+    return esc;
+  }
 }
 
 Token Tokenizer::nextToken() {
@@ -80,6 +101,45 @@ Token Tokenizer::nextToken() {
       value = value * 10 + (input[loc++] - '0');
     }
     return Token(Token::IntLit, value, curr_loc, loc - last_loc);
+  }
+
+  // String literal
+  if (c == '"') {
+    size_t start_loc = loc++;
+    Location str_start = curr_loc;
+    std::string value;
+    bool closed = false;
+
+    while (loc < input.size()) {
+      if (input[loc] == '\\') {
+        if (++loc >= input.size()) {
+          Diagnostics::error(
+            Location { filename, line, start_loc - last_line },
+            Location { filename, line, loc - last_line },
+            "escape sequence not terminated"
+          );
+          value += '\\';
+          break;
+        }
+        value.push_back(escaped(input[loc++]));
+        continue;
+      }
+      
+      if (input[loc] == '"') {
+        closed = true;
+        loc++;
+        break;
+      }
+
+      value.push_back(input[loc++]);
+    }
+
+    if (!closed) {
+      Diagnostics::error(str_start, Location { filename, line, loc - last_line },
+        "string literal not closed");
+    }
+
+    return Token(Token::StrLit, value, str_start);
   }
 
   // Check for multi-character operators like >=, <=, ==, !=, +=, etc.
@@ -167,5 +227,62 @@ bool Tokenizer::hasMore() const {
 }
 
 const char *mbt::stringifyToken(Token t) {
-  return Token::type_names[(int) t.ty];
+  return stringifyToken(t.ty);
+}
+
+const char *mbt::stringifyToken(Token::Type t) {
+  static std::map<Token::Type, const char*> literals = {
+    { Token::And, "'&&'" },
+    { Token::Arrow, "'->'" },
+    { Token::Assign, "'='" },
+    { Token::BitAnd, "'&'" },
+    { Token::BitAndEq, "'&='" },
+    { Token::BitOr, "'|'" },
+    { Token::BitOrEq, "'|='" },
+    { Token::Bool, "builtin-type 'Bool'" },
+    { Token::Colon, "':'" },
+    { Token::Comma, "','" },
+    { Token::Div, "'/'" },
+    { Token::DivEq, "'/='" },
+    { Token::Else, "keyword 'else'" },
+    { Token::End, "EOF" },
+    { Token::Eq, "'=='" },
+    { Token::Exclaim, "'!'" },
+    { Token::FixedArray, "builtin-type 'FixedArray'"},
+    { Token::Fn, "keyword 'fn'" },
+    { Token::For, "keyword 'for'" },
+    { Token::Ge, "'>='" },
+    { Token::Gt, "'>'" },
+    { Token::Ident, "identifier" },
+    { Token::If, "keyword 'if'" },
+    { Token::Int, "builtin-type 'Int'" },
+    { Token::IntLit, "int literal" },
+    { Token::LBrace, "'{'" },
+    { Token::LBrak, "'['" },
+    { Token::Le, "'<='" },
+    { Token::Let, "keyword 'let'" },
+    { Token::LPar, "'('" },
+    { Token::Lt, "'<'" },
+    { Token::Minus, "'-'" },
+    { Token::MinusEq, "'-='" },
+    { Token::Mod, "'%'" },
+    { Token::Mul, "'*'" },
+    { Token::MulEq, "'*='" },
+    { Token::Ne, "'!='" },
+    { Token::Or, "'||'" },
+    { Token::Plus, "'+'" },
+    { Token::PlusEq, "'+='" },
+    { Token::RBrace, "'}'" },
+    { Token::RBrak, "']'" },
+    { Token::Return, "keyword 'return'" },
+    { Token::RPar, "')'" },
+    { Token::Semicolon, "';'" },
+    { Token::StrLit, "string literal" },
+    { Token::Unit, "builtin-type 'unit'" },
+    { Token::While, "keyword 'while'" },
+    { Token::Xor, "'^'" },
+    { Token::XorEq, "'^='" },
+  };
+  assert(literals.contains(t));
+  return literals[t];
 }

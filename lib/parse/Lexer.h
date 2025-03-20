@@ -7,35 +7,30 @@
 namespace mbt {
 
 class Token {
-public:
-
-#define TOKEN_TYPES(X) \
-  X(Ident) X(IntLit) X(StrLit) \
-  X(Eq) X(Ne) X(Le) X(Ge) X(Lt) X(Gt) \
-  X(Plus) X(Minus) X(Mul) X(Div) X(Mod) \
-  X(PlusEq) X(MinusEq) X(MulEq) X(DivEq) \
-  X(BitAnd) X(BitOr) X(Xor) \
-  X(BitAndEq) X(BitOrEq) X(XorEq) \
-  X(And) X(Or) \
-  X(Assign) X(Exclaim) \
-  X(Semicolon) X(Colon) X(Arrow) \
-  X(Comma) X(LPar) X(RPar) X(LBrak) X(RBrak) X(LBrace) X(RBrace) \
-  X(If) X(Else) X(Let) X(While) X(For) X(Fn) \
-  X(Int) X(Bool) X(FixedArray) \
-  X(Return) \
-  X(End)
-
-#define X(name) name, 
+public: 
   enum Type {
-    TOKEN_TYPES(X)
-  } ty;
-#undef X
+    // literals
+    Ident, IntLit, StrLit,
 
-#define X(name) #name, 
-  static constexpr const char* type_names[] = {
-    TOKEN_TYPES(X)
-  };
-#undef X
+    // operators
+    Eq, Ne, Le, Ge, Lt, Gt,
+    Plus, Minus, Mul, Div, Mod,
+    PlusEq, MinusEq, MulEq, DivEq,
+    BitAnd, BitOr, Xor,
+    BitAndEq, BitOrEq, XorEq,
+    And, Or,
+    Assign, Exclaim, Semicolon, Colon, Arrow,
+    Comma, LPar, RPar, LBrak, RBrak, LBrace, RBrace,
+
+    // keywords
+    If, Else, Let, While, For, Fn, Return,
+
+    // types
+    Int, Bool, FixedArray, Unit,
+
+    // EOF
+    End
+  } ty;
 
   int vi;
   std::string vs;
@@ -47,6 +42,7 @@ public:
 };
 
 const char *stringifyToken(Token t);
+const char *stringifyToken(Token::Type t);
 
 class Tokenizer {
 private:
@@ -56,6 +52,10 @@ private:
   // Index of the last '\n' at the previous line
   size_t last_line;
   size_t line;
+
+  // Get the escaped character.
+  // For example, if esc == 'n', then it returns '\n' (0x0A).
+  char escaped(char esc);
   
 public:
   Tokenizer(const std::string &filename, const std::string& input);
