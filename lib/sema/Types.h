@@ -6,90 +6,94 @@
 namespace mbt {
 
 class Type {
-public:
   int kind;
-  constexpr static int typeKind = 0;
-  virtual std::string toString() = 0;
+public:
+  int getKind() const { return kind; }
+
+  Type(int kind): kind(kind) {}
   virtual ~Type() {}
+
+  // Unlike AST nodes, this returns the full type.
+  virtual std::string toString() const = 0;
 };
 
-class IntType : public Type {
+template<class T, int TypeKind>
+class TypeImpl : public Type {
 public:
-  int width;
-  constexpr static int typeKind = 1;
-
-  IntType(int width = 32): width(width) {
-    kind = typeKind;
+  template<class Fn>
+  void walk(Fn &&walker) {
+    static_cast<T*>(this)->walkImpl(walker);
   }
 
-  std::string toString() override { return "int"; }
+  static bool classof(const Type *type) {
+    return type->getKind() == TypeKind;
+  }
+
+  TypeImpl(): Type(TypeKind) {}
+
+  std::string toString() const override = 0;
 };
 
-class FunctionType : public Type {
+class IntType : public TypeImpl<IntType, 1> {
+public:
+  int width;
+
+  IntType(int width = 32): width(width) { }
+
+  std::string toString() const override { return "int"; }
+};
+
+class FunctionType : public TypeImpl<FunctionType, 2> {
 public:
   std::vector<Type*> paramTy;
   Type *retTy;
-  constexpr static int typeKind = 2;
+  
   FunctionType(const std::vector<Type*> &paramTy, Type *retTy):
-    paramTy(paramTy), retTy(retTy) {
-    kind = typeKind;
-  }
+    paramTy(paramTy), retTy(retTy) { }
 
-  std::string toString() override;
+  std::string toString() const override;
 };
 
-class WeakType : public Type {
+class WeakType : public TypeImpl<WeakType, 3> {
 public:
   int id;
   Type *real;
-  constexpr static int typeKind = 3;
-  WeakType(int id): id(id), real(nullptr) {
-    kind = typeKind;
-  }
+  
+  WeakType(int id): id(id), real(nullptr) { }
 
-  std::string toString() override;
+  std::string toString() const override;
 };
 
-class UnitType : public Type {
+class UnitType : public TypeImpl<UnitType, 4> {
 public:
-  constexpr static int typeKind = 4;
-  UnitType() {
-    kind = typeKind;
-  }
+  UnitType() { }
 
-  std::string toString() override { return "unit"; }
+  std::string toString() const override { return "unit"; }
 };
 
-class BoolType : public Type {
+class BoolType : public TypeImpl<BoolType, 5> {
 public:
-  constexpr static int typeKind = 5;
-  BoolType() {
-    kind = typeKind;
-  }
+  BoolType() { }
 
-  std::string toString() override { return "bool"; }
+  std::string toString() const override { return "bool"; }
 };
 
 // This is a user-defined type that we don't yet know about.
 // Parser will collect all information of known types,
 // and Sema will resolve them.
-class UnresolvedType : public Type {
+class UnresolvedType : public TypeImpl<UnresolvedType, 6> {
 public:
-  constexpr static int typeKind = 6;
-
   std::string name;
   std::vector<std::string> typeArgs;
-  UnresolvedType() {
-    kind = typeKind;
-  }
+  UnresolvedType() { }
 
-  std::string toString() override { return "<unresolved>"; }
+  std::string toString() const override { return "<unresolved>"; }
 };
 
 template<class T>
 bool isa(Type *t) {
   assert(t);
-  return t->kind == T::typeKind;
+  return T::classof(t);
 }
 
 template<class T>
@@ -100,9 +104,7 @@ T *cast(Type *t) {
 
 template<class T>
 T *dyn_cast(Type *t) {
-  if (!isa<T>(t))
-    return nullptr;
-  return (T*) t;
+  return isa<T>(t) ? cast<T>(t) : nullptr;
 }
 
 } // namespace mbt

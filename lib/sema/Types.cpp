@@ -3,7 +3,7 @@
 
 using namespace mbt;
 
-std::string FunctionType::toString() {
+std::string FunctionType::toString() const {
   std::stringstream ss;
   for (auto x : paramTy)
     ss << x->toString() << ", ";
@@ -14,6 +14,6 @@ std::string FunctionType::toString() {
   return std::format("{} -> {}", str, retTy->toString());
 }
 
-std::string WeakType::toString() {
+std::string WeakType::toString() const {
   return std::format("'{}", id);
 }

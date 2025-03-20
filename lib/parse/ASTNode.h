@@ -30,8 +30,6 @@ public:
 template<class T, int NodeType>
 class ASTNodeImpl : public ASTNode {
 public:
-  constexpr static int nodeType = NodeType;
-
   template<class Fn>
   void walk(Fn &&walker) {
     static_cast<T*>(this)->walkImpl(walker);
