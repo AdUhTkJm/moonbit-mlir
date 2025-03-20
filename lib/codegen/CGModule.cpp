@@ -1,11 +1,17 @@
 #include "CGModule.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "lib/dialect/MoonOps.h"
 
 using namespace mbt;
 using namespace mlir;
+
+CGModule::SemanticScope::SemanticScope(CGModule &cgm):
+  oldTable(cgm.symbolTable), cgm(cgm) {}
+
+CGModule::SemanticScope::~SemanticScope() {
+  cgm.symbolTable = oldTable;
+}
 
 CGModule::CGModule(MLIRContext &ctx):
   ctx(ctx), builder(&ctx) {
@@ -128,8 +134,10 @@ mlir::Value CGModule::emitExpr(ASTNode *node) {
     return op;
   }
 
-  if (auto var = dyn_cast<VarNode>(node))
+  if (auto var = dyn_cast<VarNode>(node)) {
+    assert(symbolTable.contains(var->name));
     return symbolTable[var->name];
+  }
 
   assert(false && "NYI");
 }
@@ -154,15 +162,24 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
   return emitExpr(node);
 }
 
+void CGModule::emitFunctionPrologue(func::FuncOp funcOp, FnDeclNode *fn) {
+  for (auto [i, argDecl] : llvm::enumerate(fn->params))
+    symbolTable[argDecl->name] = funcOp.getArgument(i);
+}
+
 void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
   // Resets builder's insertion point when destroyed.
   OpBuilder::InsertionGuard guard(builder);
+  // Resets symbol table when destroyed.
+  SemanticScope functionScope(*this);
 
   builder.setInsertionPointToEnd(theModule.getBody());
   auto type = cast<mlir::FunctionType>(getTy(globalFn->type));
   auto loc = getLoc(globalFn);
   auto funcOp = builder.create<func::FuncOp>(loc, globalFn->name, type);
   builder.setInsertionPointToStart(funcOp.addEntryBlock());
+
+  emitFunctionPrologue(funcOp, globalFn);
 
   mlir::Value value = emitStmt(globalFn->body);
   builder.create<func::ReturnOp>(loc, value);

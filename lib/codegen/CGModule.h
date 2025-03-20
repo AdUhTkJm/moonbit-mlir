@@ -1,6 +1,7 @@
 #ifndef CGMODULE_H
 #define CGMODULE_H
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/OpDefinition.h"
@@ -28,6 +29,15 @@ class CGModule {
   // Type cache:
   mlir::Type unitType;
   mlir::Type boolType;
+
+  // Symbol table manager with RAII.
+  struct SemanticScope {
+    decltype(symbolTable) oldTable;
+    CGModule &cgm;
+  public:
+    SemanticScope(CGModule &cgm);
+    ~SemanticScope();
+  };
 public:
   CGModule(mlir::MLIRContext &ctx);
 
@@ -38,6 +48,8 @@ public:
   mlir::Value emitExpr(ASTNode *node);
   mlir::Value emitIfExpr(IfNode *ifexpr);
   mlir::Value emitBinaryExpr(BinaryNode *binary);
+
+  void emitFunctionPrologue(mlir::func::FuncOp op, FnDeclNode *fn);
 
   void dump();
 
