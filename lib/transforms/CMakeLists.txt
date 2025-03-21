@@ -2,6 +2,7 @@ set(TRANSFORMS_SOURCES
   MoonPasses.cpp
   RemoveUnit.cpp
   FPtrResolution.cpp
+  LLVMLowering.cpp
 )
 
 add_library(LibTransforms STATIC ${TRANSFORMS_SOURCES})
@@ -24,6 +25,10 @@ target_link_libraries(LibTransforms PRIVATE
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
+  MLIRLLVMIRTransforms
+  MLIRToLLVMIRTranslationRegistration
+  MLIRFromLLVMIRTranslationRegistration
+  MLIRTargetLLVM
   MLIRTargetLLVMIRExport
   MLIRSCFToControlFlow
   MLIRTransforms

@@ -78,7 +78,7 @@ Token Tokenizer::nextToken() {
   Location curr_loc = Location { filename, line, loc - last_line };
 
   // Identifiers and keywords
-  if (std::isalpha(c)) {
+  if (std::isalpha(c) || c == '_') {
     std::string name;
     while (loc < input.size() && (std::isalnum(input[loc]) || input[loc] == '_')) {
       name += input[loc++];

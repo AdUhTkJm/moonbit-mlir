@@ -1,5 +1,3 @@
-fn print_d(s : Int) -> Unit = "%println"
-
 fn fib(x: Int) -> Int {
   if (x < 1) {
     0
@@ -9,5 +7,5 @@ fn fib(x: Int) -> Int {
 }
 
 fn main {
-  print_d(fib(7))
+  let _ = fib(7)
 }

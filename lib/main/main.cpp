@@ -3,6 +3,7 @@
 #include "lib/codegen/CGModule.h"
 #include "lib/sema/Sema.h"
 #include "lib/transforms/MoonPasses.h"
+#include "lib/transforms/LLVMLowering.h"
 #include <fstream>
 #include <sstream>
 
@@ -62,8 +63,13 @@ int main(int argc, char **argv) {
   cgm.dump();
 
   registerMoonPasses(&ctx, theModule);
-  std::cerr << "------- Transformed -------\n";
+  llvm::errs() << "------- Transformed -------\n";
   theModule.dump();
+
+  llvm::LLVMContext llvmCtx;
+  auto llvmModule = mbt::translateToLLVM(llvmCtx, theModule);
+  llvm::errs() << "------- Lowered -------\n";
+  llvmModule->print(llvm::errs(), nullptr);
   
   return 0;
 }
