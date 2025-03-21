@@ -16,6 +16,10 @@ using ASTWalkerWithDepth = std::function<bool (ASTNode*, int)>;
 
 class ASTNode {
   int kind;
+
+protected:
+  std::string typeString() const;
+  
 public:
   Type *type = nullptr;
   Location begin, end;

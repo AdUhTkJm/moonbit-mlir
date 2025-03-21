@@ -2,8 +2,12 @@
 
 using namespace mbt;
 
+std::string ASTNode::typeString() const {
+  return type ? type->toString() : "<unknown>";
+}
+
 std::string IntLiteralNode::toString() const {
-  return std::format("IntLiteral  {}", value);
+  return std::format("IntLiteral  {} : {}", value, typeString());
 }
 
 bool IntLiteralNode::walk(ASTWalkerWithDepth walker, int depth) {
@@ -11,7 +15,7 @@ bool IntLiteralNode::walk(ASTWalkerWithDepth walker, int depth) {
 }
 
 std::string VarDeclNode::toString() const {
-  return std::format("VarDecl  {}: {}", name, type ? type->toString() : "<unknown>");
+  return std::format("VarDecl  {} : {}", name, typeString());
 }
 
 bool VarDeclNode::walk(ASTWalkerWithDepth walker, int depth) {
@@ -19,7 +23,7 @@ bool VarDeclNode::walk(ASTWalkerWithDepth walker, int depth) {
 }
 
 std::string FnDeclNode::toString() const {
-  return std::format("FnDecl  {}", name);
+  return std::format("FnDecl  {} : {}", name, typeString());
 }
 
 bool FnDeclNode::walk(ASTWalkerWithDepth walker, int depth) {
@@ -64,7 +68,7 @@ std::string BinaryNode::toString() const {
     { BinaryNode::Ne , "!=" },
   };
 
-  return std::format("BinaryOp  {}", literals[op]);
+  return std::format("BinaryOp  {} : {}", literals[op], typeString());
 }
 
 bool BinaryNode::walk(ASTWalkerWithDepth walker, int depth) {
@@ -96,7 +100,7 @@ bool IfNode::walk(ASTWalkerWithDepth walker, int depth) {
 }
 
 std::string VarNode::toString() const {
-  return std::format("Var  {}: {}", name, type ? type->toString() : "<unknown>");
+  return std::format("Var  {} : {}", name, typeString());
 }
 
 bool VarNode::walk(ASTWalkerWithDepth walker, int depth) {
@@ -104,7 +108,7 @@ bool VarNode::walk(ASTWalkerWithDepth walker, int depth) {
 }
 
 std::string IntrinsicNode::toString() const {
-  return std::format("Intrinsic  {}", intrinsic);
+  return std::format("Intrinsic  {} : {}", intrinsic, typeString());
 }
 
 bool IntrinsicNode::walk(ASTWalkerWithDepth walker, int depth) {
@@ -112,7 +116,7 @@ bool IntrinsicNode::walk(ASTWalkerWithDepth walker, int depth) {
 }
 
 std::string FnCallNode::toString() const {
-  return "Call";
+  return std::format("Call : {}", typeString());
 }
 
 bool FnCallNode::walk(ASTWalkerWithDepth walker, int depth) {

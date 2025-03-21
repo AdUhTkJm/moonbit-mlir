@@ -58,7 +58,11 @@ bool TypeInferrer::unify(Type *&t1, Type *&t2) {
       
       return unify(fun1->retTy, fun2->retTy);
     }
+    return false;
   }
+
+  if (t1->getKind() == t2->getKind())
+    return true;
 
   return false;
 }
@@ -71,30 +75,48 @@ Type *TypeInferrer::repr(Type *ty) {
 
     return weak;
   }
+
+  if (auto fn = dyn_cast<FunctionType>(ty)) {
+    std::vector<Type*> paramTy;
+    for (auto x : fn->paramTy)
+      paramTy.push_back(x = repr(x));
+    fn->paramTy = paramTy;
+    fn->retTy = repr(fn->retTy);
+    return fn;
+  }
   
   return ty;
 }
 
 Type *TypeInferrer::inferFn(FnDeclNode *fn) {
-  SemanticScope scope(*this);
-
   std::vector<Type*> paramsTy;
-  for (auto param : fn->params)
-    paramsTy.push_back(infer(param));
+  Type *retTy = nullptr;
 
-  Type *t = infer(fn->body);
+  {
+    // We must record the function itself to typeMap, so we limit the scope
+    // of this guard.
+    SemanticScope scope(*this);
+    for (auto param : fn->params)
+      paramsTy.push_back(infer(param));
+
+    retTy = infer(fn->body);
+  }
+  
   if (fn->type) {
+    typeMap[fn->name] = fn->type;
+
     auto fnTy = cast<FunctionType>(fn->type);
-    if (fnTy->retTy && !unify(fnTy->retTy, t)) {
+    if (fnTy->retTy && !unify(fnTy->retTy, retTy)) {
       Diagnostics::error(fn->begin, fn->end,
         std::format("return type {} does not match expression type {}",
-          fnTy->retTy->toString(), t->toString()));
+          fnTy->retTy->toString(), retTy->toString()));
       
       return new UnitType();
     }
   }
 
-  fn->type = new FunctionType(paramsTy, t);
+  fn->type = new FunctionType(paramsTy, retTy);
+  typeMap[fn->name] = fn->type;
   return new UnitType();
 }
 
@@ -181,7 +203,7 @@ Type *TypeInferrer::inferCall(FnCallNode *call) {
     
     bool success = unify(type, expected);
     assert(success);
-    return call->type = type;
+    return call->type = retTy;
   }
 
   for (auto [i, arg] : llvm::enumerate(call->args)) {
@@ -241,4 +263,16 @@ Type *TypeInferrer::infer(ASTNode *node) {
   }
 
   assert(false);
+}
+
+void TypeInferrer::tidy(ASTNode *node) {
+  node->walk([&](ASTNode *subnode) {
+    subnode->type = repr(subnode->type);
+
+    if (subnode->type->isWeak())
+      Diagnostics::error(subnode->begin, subnode->end,
+        "unable to deduce this type");
+
+    return true;
+  });
 }

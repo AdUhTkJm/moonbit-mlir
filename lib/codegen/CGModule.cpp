@@ -120,13 +120,15 @@ mlir::Value CGModule::emitBinaryExpr(BinaryNode *binary) {
 }
 
 mlir::Value CGModule::emitCallExpr(FnCallNode *node) {
+  auto loc = getLoc(node);
   mlir::Value fnCall = emitExpr(node->func);
 
   llvm::SmallVector<mlir::Value> argValues;
   for (auto x : node->args)
     argValues.push_back(emitExpr(x));
   
-  
+  auto callOp = builder.create<func::CallIndirectOp>(loc, fnCall, argValues);
+  return callOp.getResult(0);
 }
 
 mlir::Value CGModule::getVariable(mlir::Location loc, const std::string &name) {
@@ -180,6 +182,9 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
     mlir::Value result;
     for (auto x : block->body)
       result = emitStmt(x);
+    
+    if (!block->body.size())
+      result = builder.create<mir::GetUnitOp>(getLoc(node));
     return result;
   }
 

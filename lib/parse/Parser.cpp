@@ -260,6 +260,9 @@ ASTNode *Parser::topFn() {
     expect(Token::Arrow);
     Type *retTy = parseType();
     fnTy = new FunctionType(paramTy, retTy);
+  } else {
+    // Types of "main" and "init" are already known.
+    fnTy = new FunctionType({}, new UnitType());
   }
 
   mbt::ASTNode *body = nullptr;
