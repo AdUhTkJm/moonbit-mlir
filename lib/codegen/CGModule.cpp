@@ -222,7 +222,7 @@ void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
   builder.create<func::ReturnOp>(loc, value);
 }
 
-void CGModule::emitModule(ASTNode *n) {
+ModuleOp CGModule::emitModule(ASTNode *n) {
   theModule = ModuleOp::create(getLoc(n));
   auto toplevels = cast<BlockNode>(n);
   for (auto one : toplevels->body) {
@@ -230,6 +230,7 @@ void CGModule::emitModule(ASTNode *n) {
       emitGlobalFn(fndecl);
     }
   }
+  return theModule;
 }
 
 void CGModule::dump() {

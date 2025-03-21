@@ -4,6 +4,6 @@ set(PARSE_SOURCES
   ASTNode.cpp
 )
 
-add_library(ParseLib STATIC ${PARSE_SOURCES})
+add_library(LibParse STATIC ${PARSE_SOURCES})
 
-target_include_directories(ParseLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(LibParse PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

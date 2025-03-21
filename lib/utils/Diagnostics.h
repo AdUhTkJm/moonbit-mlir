@@ -2,18 +2,6 @@
 #define DIAGNOSTICS_H
 
 #include "lib/utils/Common.h"
-#include <sstream>
-#include <iostream>
-#include <cassert>
-#include <format>
-#include <vector>
-#include <cstdlib>
-#include <unistd.h>
-
-#define RED     "\033[1;31m"
-#define MAGENTA "\033[1;35m"
-#define CYAN    "\033[1;36m"
-#define RESET   "\033[0m"
 
 namespace mbt {
 
@@ -30,31 +18,13 @@ private:
         : sev(sev), from(from), to(to), msg(msg) {}
   
     // Output formatted message
-    void report() const {
-      auto sev_s = reportSeverity(sev);
-      std::cerr << format("{}:{}:{}: {}: {}\n", from.filename.str(), from.line, from.col, sev_s, msg);
-    }
+    void report() const;
 
     Severity sev;
     Location from, to;
     std::string msg;
   
-    std::string reportSeverity(Severity sev) const {
-      if (isatty(fileno(stdout))) {
-        switch (sev) {
-        case Severity::Error: return RED "error" RESET;
-        case Severity::Warning: return MAGENTA "warning" RESET;
-        case Severity::Info: return CYAN "note" RESET;
-        }
-      } else {
-        switch (sev) {
-        case Severity::Error: return "error";
-        case Severity::Warning: return "warning";
-        case Severity::Info: return "note";
-        }
-      }
-      assert(false);
-    }
+    std::string reportSeverity(Severity sev) const;
   };
   
   static std::vector<Diagnostic> diags;

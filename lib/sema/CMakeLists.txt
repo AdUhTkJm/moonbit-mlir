@@ -3,6 +3,6 @@ set(SEMA_SOURCES
   Types.cpp
 )
 
-add_library(SemaLib STATIC ${SEMA_SOURCES})
+add_library(LibSema STATIC ${SEMA_SOURCES})
 
-target_include_directories(SemaLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(LibSema PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

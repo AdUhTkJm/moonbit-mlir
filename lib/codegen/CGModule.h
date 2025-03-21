@@ -42,7 +42,7 @@ class CGModule {
 public:
   CGModule(mlir::MLIRContext &ctx);
 
-  void emitModule(ASTNode *node);
+  mlir::ModuleOp emitModule(ASTNode *node);
 
   void emitGlobalFn(FnDeclNode *globalFn);
   mlir::Value emitStmt(ASTNode *node);

@@ -1,10 +1,8 @@
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/PassManager.h"
 #include "lib/parse/Parser.h"
 #include "lib/utils/Diagnostics.h"
 #include "lib/codegen/CGModule.h"
 #include "lib/sema/Sema.h"
+#include "lib/transforms/MoonPasses.h"
 #include <fstream>
 #include <sstream>
 
@@ -60,10 +58,12 @@ int main(int argc, char **argv) {
 
   mlir::MLIRContext ctx;
   CGModule cgm(ctx);
-  cgm.emitModule(node);
+  mlir::ModuleOp theModule = cgm.emitModule(node);
   cgm.dump();
 
-  mlir::PassManager pm(&ctx);
+  registerMoonPasses(&ctx, theModule);
+  std::cerr << "------- Transformed -------\n";
+  theModule.dump();
   
   return 0;
 }

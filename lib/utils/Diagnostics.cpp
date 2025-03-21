@@ -1,4 +1,11 @@
 #include "Diagnostics.h"
+#include <unistd.h>
+#include <sstream>
+
+#define RED     "\033[1;31m"
+#define MAGENTA "\033[1;35m"
+#define CYAN    "\033[1;36m"
+#define RESET   "\033[0m"
 
 using namespace mbt;
 
@@ -6,6 +13,28 @@ std::vector<Diagnostics::Diagnostic> Diagnostics::diags;
 std::vector<std::string> Diagnostics::lines;
 int Diagnostics::errorCnt = 0;
 int Diagnostics::warningCnt = 0;
+
+std::string Diagnostics::Diagnostic::reportSeverity(Severity sev) const {
+  if (isatty(fileno(stdout))) {
+    switch (sev) {
+    case Severity::Error: return RED "error" RESET;
+    case Severity::Warning: return MAGENTA "warning" RESET;
+    case Severity::Info: return CYAN "note" RESET;
+    }
+  } else {
+    switch (sev) {
+    case Severity::Error: return "error";
+    case Severity::Warning: return "warning";
+    case Severity::Info: return "note";
+    }
+  }
+  assert(false);
+}
+
+void Diagnostics::Diagnostic::report() const {
+  auto sev_s = reportSeverity(sev);
+  std::cerr << format("{}:{}:{}: {}: {}\n", from.filename.str(), from.line, from.col, sev_s, msg);
+}
 
 void Diagnostics::reportAll(bool exits) {
   for (const auto& diag : diags) {

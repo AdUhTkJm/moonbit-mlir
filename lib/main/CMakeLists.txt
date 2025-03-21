@@ -17,23 +17,18 @@ target_link_libraries(
           ${conversion_libs}
           ${extension_libs}
           MLIRAnalysis
-          MLIRBuiltinToLLVMIRTranslation
           MLIRIR
           MLIRExecutionEngine
           MLIRParser
           MLIRPass
-          MLIRLLVMCommonConversion
-          MLIRLLVMDialect
-          MLIRLLVMToLLVMIRTranslation
-          MLIRTargetLLVMIRExport
           MLIRMemRefDialect
           MLIRFunctionInterfaces
           MLIRSideEffectInterfaces
-          MLIRTransforms
           MLIRCastInterfaces
-          ParseLib
-          UtilsLib
-          CodegenLib
-          SemaLib)
+          LibParse
+          LibSema
+          LibCG
+          LibTransforms
+          LibUtils)
 
 mlir_check_link_libraries(moonc)
