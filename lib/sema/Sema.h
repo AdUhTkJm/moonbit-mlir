@@ -31,10 +31,13 @@ class TypeInferrer {
     SemanticScope(TypeInferrer &inferrer);
     ~SemanticScope();
   };
-public:
-  
+
+public:  
   // This also updates the `type` field in ASTNode.
   Type *infer(ASTNode *node);
+
+  // Tidies up all weak types, making them referring to the concrete type.
+  void tidy(ASTNode *node);
 };
 
 } // namespace mbt

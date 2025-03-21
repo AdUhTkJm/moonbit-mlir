@@ -8,6 +8,12 @@
 
 namespace mbt {
 
+class ASTNode;
+
+// Return false to stop walking.
+using ASTWalker = std::function<bool (ASTNode*)>;
+using ASTWalkerWithDepth = std::function<bool (ASTNode*, int)>;
+
 class ASTNode {
   int kind;
 public:
@@ -24,6 +30,10 @@ public:
   // further layers (eg. nodes inside a BlockNode) won't be output.
   // Use `dump()` for that.
   virtual std::string toString() const = 0;
+
+  virtual bool walk(ASTWalkerWithDepth, int = 0) = 0;
+  bool walk(ASTWalker);
+  void dump();
 };
 
 template<class T, int NodeType>
@@ -37,6 +47,7 @@ public:
     ASTNode(NodeType, begin, end) {}
 
   std::string toString() const override = 0;
+  virtual bool walk(ASTWalkerWithDepth, int) override = 0;
 };
 
 class BinaryNode : public ASTNodeImpl<BinaryNode, 1> {
@@ -50,6 +61,7 @@ public:
     ASTNodeImpl(begin, end), op(op), l(l), r(r) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class UnaryNode : public ASTNodeImpl<UnaryNode, 2> {
@@ -63,6 +75,7 @@ public:
     ASTNodeImpl(begin, end), op(op), child(child) {}
     
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class VarDeclNode : public ASTNodeImpl<VarDeclNode, 3> {
@@ -74,6 +87,7 @@ public:
     ASTNodeImpl(begin, end), name(name), init(init) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class FnDeclNode : public ASTNodeImpl<FnDeclNode, 4> {
@@ -88,6 +102,7 @@ public:
     ASTNodeImpl(begin, end), name(name), body(body), params(params)  {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class IntLiteralNode : public ASTNodeImpl<IntLiteralNode, 5> {
@@ -99,6 +114,7 @@ public:
     ASTNodeImpl(begin, end), value(value) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class BlockNode : public ASTNodeImpl<BlockNode, 6> {
@@ -108,6 +124,7 @@ public:
   BlockNode(Location begin, Location end): ASTNodeImpl(begin, end) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class VarNode : public ASTNodeImpl<VarNode, 7> {
@@ -118,6 +135,7 @@ public:
     ASTNodeImpl(begin, end), name(name) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class IfNode : public ASTNodeImpl<IfNode, 8> {
@@ -133,6 +151,7 @@ public:
     ASTNodeImpl(begin, end), cond(cond), ifso(ifso), ifnot(ifnot) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 9> {
@@ -143,6 +162,7 @@ public:
     ASTNodeImpl(begin, end), intrinsic(name) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 class FnCallNode : public ASTNodeImpl<FnCallNode, 10> {
@@ -154,6 +174,7 @@ public:
     ASTNodeImpl(begin, end), func(func), args(args) {}
 
   std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
 };
 
 template<class T>
