@@ -1,18 +1,15 @@
 #include "MoonPasses.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "lib/dialect/MoonOps.h"
 
 using namespace mlir;
 using namespace mbt;
 
 #define REMOVE_UNIT_REWRITER(Name, Ty) \
-  struct RemoveUnit##Name : public OpRewritePattern<Ty> {                                 \
-    using OpRewritePattern::OpRewritePattern;                                             \
-                                                                                          \
-    LogicalResult matchAndRewrite(Ty op,                                            \
-                                        PatternRewriter &rewriter) const override;  \
+  struct RemoveUnit##Name : public OpRewritePattern<Ty> {                    \
+    using OpRewritePattern::OpRewritePattern;                                \
+                                                                             \
+    LogicalResult matchAndRewrite(Ty op,                                     \
+                                  PatternRewriter &rewriter) const override; \
   }
 
 REMOVE_UNIT_REWRITER(Intrinsic, mir::IntrinsicOp);

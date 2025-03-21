@@ -73,6 +73,13 @@ ASTNode *Parser::primary() {
     return new VarNode(tok.vs, tok.begin, tok.end);
   }
 
+  if (test(Token::LPar)) {
+    // TODO: tuples, unit literal
+    auto x = expr();
+    expect(Token::RPar);
+    return x;
+  }
+
   consume();
   Diagnostics::error(peek().begin, peek().end,
     std::format("unexpected token: {}", stringifyToken(peek())));
@@ -116,10 +123,10 @@ ASTNode *Parser::ifExpr() {
 }
 
 ASTNode *Parser::compareExpr() {
+  Location begin = peek().begin;
   auto x = ifExpr();
   if (peek(Token::Le) || peek(Token::Ge) || peek(Token::Gt)
    || peek(Token::Lt) || peek(Token::Ne) || peek(Token::Eq)) {
-    Location begin = peek().begin;
     auto ty = consume().ty;
     auto next = ifExpr();
     switch (ty) {
@@ -144,9 +151,9 @@ ASTNode *Parser::compareExpr() {
 }
 
 ASTNode *Parser::mulExpr() {
+  Location begin = peek().begin;
   auto x = compareExpr();
   while (peek(Token::Mul) || peek(Token::Div) || peek(Token::Mod)) {
-    Location begin = peek().begin;
     auto ty = consume().ty;
     BinaryNode::Type op;
     switch (ty) {
@@ -166,9 +173,9 @@ ASTNode *Parser::mulExpr() {
 }
 
 ASTNode *Parser::addExpr() {
+  Location begin = peek().begin;
   auto x = mulExpr();
   while (peek(Token::Plus) || peek(Token::Minus)) {
-    Location begin = peek().begin;
     auto ty = consume().ty;
     auto op = ty == Token::Plus ? BinaryNode::Add : BinaryNode::Sub;
     auto nextmul = mulExpr();

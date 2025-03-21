@@ -1,17 +1,13 @@
 fn print_d(s : Int) -> Unit = "%println"
 
-fn empty() -> Unit {
-  
-}
-
-fn func(x: Int) -> Int {
-  x;
+fn fib(x: Int) -> Int {
+  if (x < 1) {
+    0
+  } else {
+    fib(x - 1) + fib(x - 2)
+  }
 }
 
 fn main {
-  let x = 1 + 2 * 3
-  let y = 2
-  let z = x / y
-  let w = if z > 0 { x } else { y }
-  print_d(func(w))
+  print_d(fib(7))
 }

@@ -13,8 +13,12 @@ using namespace mlir;
 void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule) {
   PassManager pm(ctx);
 
-  // Remove Unit types.
   pm.addPass(mbt::createRemoveUnitPass());
+
+  // This fptr resolution creates some dead values.
+  // Eliminate them by DCE pass.
+  pm.addPass(mbt::createFPtrResolutionPass());
+  pm.addPass(mlir::createRemoveDeadValuesPass());
 
   // Convert MLIR builtin dialects to LLVM IR.
   pm.addPass(mlir::createConvertFuncToLLVMPass());

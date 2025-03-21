@@ -1,6 +1,7 @@
 set(TRANSFORMS_SOURCES
   MoonPasses.cpp
   RemoveUnit.cpp
+  FPtrResolution.cpp
 )
 
 add_library(LibTransforms STATIC ${TRANSFORMS_SOURCES})
