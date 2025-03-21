@@ -79,6 +79,27 @@ ASTNode *Parser::primary() {
   return nullptr;
 }
 
+ASTNode *Parser::callExpr() {
+  auto begin = peek().begin;
+  auto x = primary();
+  
+  // A function call.
+  while (test(Token::LPar)) {
+    std::vector<ASTNode*> args;
+    while (!test(Token::RPar)) {
+      args.push_back(expr());
+      if (test(Token::RPar))
+        break;
+      
+      if (!test(Token::Comma) && !peek(Token::RPar))
+        Diagnostics::error(peek().begin, peek().end, "expected ','");
+    }
+    x = new FnCallNode(x, args, begin, last().end);
+  }
+
+  return x;
+}
+
 ASTNode *Parser::ifExpr() {
   if (test(Token::If)) {
     Location begin = last().begin;
@@ -91,7 +112,7 @@ ASTNode *Parser::ifExpr() {
     return new IfNode(cond, ifso, begin, last().end);
   }
 
-  return primary();
+  return callExpr();
 }
 
 ASTNode *Parser::compareExpr() {
@@ -219,7 +240,7 @@ ASTNode *Parser::topFn() {
   // A normal function.
   if (name != "main" && name != "init") {
     expect(Token::LPar);
-    do {
+    while (!test(Token::RPar)) {
       auto begin = peek().begin;
       auto paramName = expect(Token::Ident).vs;
       // Type annotation is required.
@@ -230,13 +251,10 @@ ASTNode *Parser::topFn() {
       auto decl = new VarDeclNode(paramName, nullptr, begin, last().end);
       decl->type = ty;
       params.push_back(decl);
-
-      if (test(Token::RPar))
-        break;
       
-      if (!test(Token::Comma))
+      if (!test(Token::Comma) && !peek(Token::RPar))
         Diagnostics::error(peek().begin, peek().end, "expected ','");
-    } while (true);
+    }
 
     // Return value is also required.
     expect(Token::Arrow);

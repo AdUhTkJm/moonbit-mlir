@@ -22,6 +22,7 @@ class TypeInferrer {
   Type *inferIf(IfNode *ifexpr);
   Type *inferVarDecl(VarDeclNode *decl);
   Type *inferBinary(BinaryNode *binary);
+  Type *inferCall(FnCallNode *call);
 
   struct SemanticScope {
     decltype(typeMap) oldMap;

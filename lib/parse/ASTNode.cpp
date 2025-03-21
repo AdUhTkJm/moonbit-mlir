@@ -48,3 +48,7 @@ std::string VarNode::toString() const {
 std::string IntrinsicNode::toString() const {
   return std::format("intrinsic  {}", intrinsic);
 }
+
+std::string FnCallNode::toString() const {
+  return "call";
+}

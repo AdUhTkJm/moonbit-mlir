@@ -1,5 +1,6 @@
 #include "Sema.h"
 #include "lib/utils/Diagnostics.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace mbt;
 
@@ -63,8 +64,13 @@ bool TypeInferrer::unify(Type *&t1, Type *&t2) {
 }
 
 Type *TypeInferrer::repr(Type *ty) {
-  if (auto weak = dyn_cast<WeakType>(ty))
-    return weak->real = repr(weak->real);
+  // We don't want to return nullptr for weak types not yet inferred.
+  if (auto weak = dyn_cast<WeakType>(ty)) {
+    if (weak->real)
+      return weak->real = repr(weak->real);
+
+    return weak;
+  }
   
   return ty;
 }
@@ -158,6 +164,36 @@ Type *TypeInferrer::inferVarDecl(VarDeclNode *decl) {
   return new UnitType();
 }
 
+Type *TypeInferrer::inferCall(FnCallNode *call) {
+  auto type = infer(call->func);
+  auto fnTy = dyn_cast<FunctionType>(type);
+  
+  if (!fnTy) {
+    assert(isa<WeakType>(type));
+
+    std::vector<Type*> paramTy;
+    paramTy.reserve(call->args.size());
+    for (auto arg : call->args)
+      paramTy.push_back(infer(arg));
+    
+    Type *retTy = fresh();
+    Type *expected = new FunctionType(paramTy, retTy);
+    
+    bool success = unify(type, expected);
+    assert(success);
+    return call->type = type;
+  }
+
+  for (auto [i, arg] : llvm::enumerate(call->args)) {
+    auto argTy = infer(arg);
+    if (!unify(argTy, fnTy->paramTy[i]))
+      Diagnostics::error(arg->begin, arg->end,
+        std::format("argument type {} does not match parameter type {}",
+          argTy->toString(), fnTy->paramTy[i]->toString()));
+  }
+  return call->type = fnTy->retTy;
+}
+
 Type *TypeInferrer::infer(ASTNode *node) {
   assert(node);
   
@@ -180,8 +216,15 @@ Type *TypeInferrer::infer(ASTNode *node) {
   if (auto fn = dyn_cast<FnDeclNode>(node))
     return inferFn(fn);
 
+  if (auto call = dyn_cast<FnCallNode>(node))
+    return inferCall(call);
+
   if (auto ifexpr = dyn_cast<IfNode>(node))
     return inferIf(ifexpr);
+
+  // We might be able to infer type based on intrinsic name in future.
+  if (isa<IntrinsicNode>(node))
+    return node->type = fresh();
 
   if (auto block = dyn_cast<BlockNode>(node)) {
     SemanticScope scope(*this);

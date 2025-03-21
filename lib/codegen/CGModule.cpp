@@ -1,6 +1,7 @@
 #include "CGModule.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "lib/dialect/MoonOps.h"
 
 using namespace mbt;
@@ -59,7 +60,7 @@ mlir::Type CGModule::getTy(mbt::Type *ty) {
   if (isa<mbt::BoolType>(ty))
     return boolType;
 
-  llvm::errs() << ty->toString() << "\n";
+  llvm::errs() << std::format("unhandled type: {}\n", ty->toString());
   assert(false && "NYI");
 }
 
@@ -118,6 +119,33 @@ mlir::Value CGModule::emitBinaryExpr(BinaryNode *binary) {
   assert(false && "NYI");
 }
 
+mlir::Value CGModule::emitCallExpr(FnCallNode *node) {
+  mlir::Value fnCall = emitExpr(node->func);
+
+  llvm::SmallVector<mlir::Value> argValues;
+  for (auto x : node->args)
+    argValues.push_back(emitExpr(x));
+  
+  
+}
+
+mlir::Value CGModule::getVariable(mlir::Location loc, const std::string &name) {
+  if (symbolTable.contains(name))
+    return symbolTable[name];
+
+  // This must have been a global.
+  auto global = theModule.lookupSymbol(name);
+  auto symref = SymbolRefAttr::get(global);
+
+  if (auto fn = dyn_cast<func::FuncOp>(global))
+    // We're referring to a function. We must emit a function pointer for this.
+    return builder.create<mir::FPtrOp>(loc, fn.getFunctionType(), symref);
+
+  // A normal variable.
+  auto var = dyn_cast<mir::GlobalOp>(global);
+  return builder.create<mir::FetchGlobalOp>(loc, var.getType(), symref);
+}
+
 mlir::Value CGModule::emitExpr(ASTNode *node) {
   assert(node);
 
@@ -130,14 +158,17 @@ mlir::Value CGModule::emitExpr(ASTNode *node) {
   if (auto intLiteral = dyn_cast<IntLiteralNode>(node)) {
     auto loc = getLoc(node);
     int value = intLiteral->value;
-    auto op = builder.create<arith::ConstantIntOp>(loc, value, getTy(intLiteral->type));
-    return op;
+    return builder.create<arith::ConstantIntOp>(loc, value, getTy(intLiteral->type));
   }
 
-  if (auto var = dyn_cast<VarNode>(node)) {
-    assert(symbolTable.contains(var->name));
-    return symbolTable[var->name];
-  }
+  if (auto var = dyn_cast<VarNode>(node))
+    return getVariable(getLoc(node), var->name);
+
+  if (auto call = dyn_cast<FnCallNode>(node))
+    return emitCallExpr(call);
+
+  if (auto intrin = dyn_cast<IntrinsicNode>(node))
+    return builder.create<mir::IntrinsicOp>(getLoc(node), getTy(intrin->type), intrin->intrinsic);
 
   assert(false && "NYI");
 }
@@ -170,14 +201,15 @@ void CGModule::emitFunctionPrologue(func::FuncOp funcOp, FnDeclNode *fn) {
 void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
   // Resets builder's insertion point when destroyed.
   OpBuilder::InsertionGuard guard(builder);
-  // Resets symbol table when destroyed.
-  SemanticScope functionScope(*this);
 
   builder.setInsertionPointToEnd(theModule.getBody());
   auto type = cast<mlir::FunctionType>(getTy(globalFn->type));
   auto loc = getLoc(globalFn);
   auto funcOp = builder.create<func::FuncOp>(loc, globalFn->name, type);
   builder.setInsertionPointToStart(funcOp.addEntryBlock());
+
+  // Resets symbol table when destroyed.
+  SemanticScope functionScope(*this);
 
   emitFunctionPrologue(funcOp, globalFn);
 

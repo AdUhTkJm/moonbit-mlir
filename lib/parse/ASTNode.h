@@ -21,8 +21,7 @@ public:
   virtual ~ASTNode() {}
 
   // This only outputs the current layer;
-  // further layers (for example, nodes inside a BlockNode)
-  // shouldn't be outputted.
+  // further layers (eg. nodes inside a BlockNode) won't be output.
   // Use `dump()` for that.
   virtual std::string toString() const = 0;
 };
@@ -30,11 +29,6 @@ public:
 template<class T, int NodeType>
 class ASTNodeImpl : public ASTNode {
 public:
-  template<class Fn>
-  void walk(Fn &&walker) {
-    static_cast<T*>(this)->walkImpl(walker);
-  }
-
   static bool classof(const ASTNode *node) {
     return node->getKind() == NodeType;
   }
@@ -55,13 +49,6 @@ public:
   BinaryNode(Type op, ASTNode *l, ASTNode *r, Location begin, Location end):
     ASTNodeImpl(begin, end), op(op), l(l), r(r) {}
 
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-    walker(l);
-    walker(r);
-  }
-
   std::string toString() const override;
 };
 
@@ -72,12 +59,6 @@ public:
   } op;
   ASTNode *child;
 
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-    walker(child);
-  }
-  
   UnaryNode(Type op, ASTNode *child, Location begin, Location end):
     ASTNodeImpl(begin, end), op(op), child(child) {}
     
@@ -88,11 +69,6 @@ class VarDeclNode : public ASTNodeImpl<VarDeclNode, 3> {
 public:
   std::string name;
   ASTNode *init;
-  
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-  }
 
   VarDeclNode(llvm::StringRef name, ASTNode *init, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), init(init) {}
@@ -107,14 +83,6 @@ public:
   ASTNode *body;
   std::vector<VarDeclNode*> params;
 
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-    for (auto node : params)
-      walker(node);
-    walker(body);
-  }
-
   FnDeclNode(llvm::StringRef name, const std::vector<VarDeclNode*> &params,
              ASTNode *body, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), body(body), params(params)  {}
@@ -127,11 +95,6 @@ public:
   constexpr static int nodeType = 5;
   int value;
 
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-  }
-
   IntLiteralNode(int value, Location begin, Location end):
     ASTNodeImpl(begin, end), value(value) {}
 
@@ -142,13 +105,6 @@ class BlockNode : public ASTNodeImpl<BlockNode, 6> {
 public:
   std::vector<ASTNode*> body;
 
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-    for (auto node : body)
-      walker(node);
-  }
-
   BlockNode(Location begin, Location end): ASTNodeImpl(begin, end) {}
 
   std::string toString() const override;
@@ -157,11 +113,6 @@ public:
 class VarNode : public ASTNodeImpl<VarNode, 7> {
 public:
   std::string name;
-
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-  }
 
   VarNode(std::string name, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name) {}
@@ -175,14 +126,6 @@ public:
   ASTNode *ifso;
   ASTNode *ifnot;
 
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-    walker(cond);
-    walker(ifso);
-    walker(ifnot);
-  }
-
   IfNode(ASTNode *cond, ASTNode *ifso, Location begin, Location end):
     ASTNodeImpl(begin, end), cond(cond), ifso(ifso), ifnot(nullptr) {}
 
@@ -192,17 +135,23 @@ public:
   std::string toString() const override;
 };
 
-class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 8> {
+class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 9> {
 public:
   std::string intrinsic;
-
-  template<class Fn>
-  void walkImpl(Fn &&walker) {
-    walker(this);
-  }
   
   IntrinsicNode(std::string name, Location begin, Location end):
     ASTNodeImpl(begin, end), intrinsic(name) {}
+
+  std::string toString() const override;
+};
+
+class FnCallNode : public ASTNodeImpl<FnCallNode, 10> {
+public:
+  ASTNode *func;
+  std::vector<ASTNode*> args;
+  
+  FnCallNode(ASTNode *func, std::vector<ASTNode*> args, Location begin, Location end):
+    ASTNodeImpl(begin, end), func(func), args(args) {}
 
   std::string toString() const override;
 };

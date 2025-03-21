@@ -2,6 +2,7 @@
 #define CGMODULE_H
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/OpDefinition.h"
@@ -48,6 +49,7 @@ public:
   mlir::Value emitExpr(ASTNode *node);
   mlir::Value emitIfExpr(IfNode *ifexpr);
   mlir::Value emitBinaryExpr(BinaryNode *binary);
+  mlir::Value emitCallExpr(FnCallNode *call);
 
   void emitFunctionPrologue(mlir::func::FuncOp op, FnDeclNode *fn);
 
@@ -56,6 +58,7 @@ public:
   mlir::Location getLoc(Location loc);
   mlir::StringAttr getStringAttr(llvm::StringRef str);
   mlir::Type getTy(mbt::Type *ty);
+  mlir::Value getVariable(mlir::Location loc, const std::string &name);
 };
 
 };

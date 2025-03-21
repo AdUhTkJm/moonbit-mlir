@@ -9,10 +9,20 @@ class MoonType<string name, string typeMnemonic> : TypeDef<MoonDialect, name> {
 }
 
 def UnitType : MoonType<"Unit", "unit"> {
-  let summary = "unit type in Moonbit";
+  let summary = "The `unit` type in Moonbit.";
 
   let description = [{
     A zero-size type that contains no information.
+  }];
+}
+
+def PointerType : MoonType<"Pointer", "ptr"> {
+  let summary = "A transparent pointer, as opposed to opaque ones in LLVM IR.";
+
+  let parameters = (ins "mlir::Type":$pointee);
+
+  let assemblyFormat = [{
+    `<` $pointee `>`
   }];
 }
 

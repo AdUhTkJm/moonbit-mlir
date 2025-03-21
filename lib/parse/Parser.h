@@ -21,6 +21,7 @@ class Parser {
   bool test(Token::Type ty);
 
   ASTNode *primary();
+  ASTNode *callExpr();
   ASTNode *ifExpr();
   ASTNode *compareExpr();
   ASTNode *mulExpr();
