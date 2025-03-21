@@ -13,6 +13,9 @@ using namespace mlir;
 void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule) {
   PassManager pm(ctx);
 
+  // Remove Unit types.
+  pm.addPass(mbt::createRemoveUnitPass());
+
   // Convert MLIR builtin dialects to LLVM IR.
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createSCFToControlFlowPass());

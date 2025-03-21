@@ -169,9 +169,6 @@ mlir::Value CGModule::emitExpr(ASTNode *node) {
   if (auto call = dyn_cast<FnCallNode>(node))
     return emitCallExpr(call);
 
-  if (auto intrin = dyn_cast<IntrinsicNode>(node))
-    return builder.create<mir::IntrinsicOp>(getLoc(node), getTy(intrin->type), intrin->intrinsic);
-
   assert(false && "NYI");
 }
 
@@ -215,6 +212,20 @@ void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
 
   // Resets symbol table when destroyed.
   SemanticScope functionScope(*this);
+
+  if (auto intrin = dyn_cast<IntrinsicNode>(globalFn->body)) {
+    auto retTy = funcOp.getResultTypes()[0];
+    SmallVector<mlir::Value> values;
+
+    // Note we can't directly assign `getArguments()` to `values`.
+    values.reserve(funcOp.getNumArguments());
+    for (auto x : funcOp.getArguments())
+      values.push_back(x);
+    
+    auto intrinOp = builder.create<mir::IntrinsicOp>(getLoc(intrin), retTy, intrin->intrinsic, values);
+    builder.create<func::ReturnOp>(loc, intrinOp.getResult());
+    return;
+  }
 
   emitFunctionPrologue(funcOp, globalFn);
 

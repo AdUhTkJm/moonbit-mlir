@@ -16,6 +16,8 @@ def GetUnitOp : MoonOp<"get_unit"> {
 
   let arguments = (ins);
   let results = (outs UnitType:$unit);
+
+  let assemblyFormat = "attr-dict";
 }
 
 def GlobalOp : MoonOp<"global"> {
@@ -61,10 +63,13 @@ def FPtrOp : MoonOp<"fptr"> {
 def IntrinsicOp : MoonOp<"intrinsic"> {
   let summary = "A Moonbit intrinsic.";
   
-  let arguments = (ins StrAttr:$intrinsic_name);
-  let results = (outs AnyType:$result);
+  let arguments = (ins StrAttr:$intrinsic_name,
+                       Variadic<AnyType>:$args);
+  let results = (outs Optional<AnyType>:$result);
   
-  let assemblyFormat = "$intrinsic_name `:` type($result) attr-dict";
+  let assemblyFormat = [{
+    $intrinsic_name $args `:` functional-type($args, $result) attr-dict
+  }];
 }
 
 #endif

@@ -8,6 +8,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wno-ambiguous-reversed-operator)
 
+if (NOT LLVM_ENABLE_RTTI)
+    message(STATUS "NOT LLVM_ENABLE_RTTI")
+    if (MSVC)
+        # Remove /GR flag for MSVC (disabling RTTI)
+        string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+    else()
+        # Remove -frtti flag for non-MSVC compilers (disabling RTTI)
+        string(REGEX REPLACE "-frtti" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+    endif()
+endif()
+
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(MLIR REQUIRED CONFIG)
 
