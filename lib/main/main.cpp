@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   mbt::TypeInferrer inferrer;
   inferrer.infer(node);
   inferrer.tidy(node);
-  node->dump();
+  // node->dump();
 
   Diagnostics::reportAll();
 

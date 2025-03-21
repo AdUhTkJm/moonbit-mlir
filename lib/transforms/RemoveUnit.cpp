@@ -19,6 +19,7 @@ REMOVE_UNIT_REWRITER(Intrinsic, mir::IntrinsicOp);
 REMOVE_UNIT_REWRITER(Return, func::ReturnOp);
 REMOVE_UNIT_REWRITER(Func, func::FuncOp);
 REMOVE_UNIT_REWRITER(CallIndirect, func::CallIndirectOp);
+REMOVE_UNIT_REWRITER(FPtr, mir::FPtrOp);
 REMOVE_UNIT_REWRITER(GetUnit, mir::GetUnitOp);
 
 // ------------------------------------------------------------
@@ -59,6 +60,21 @@ LogicalResult RemoveUnitFunc::matchAndRewrite(func::FuncOp op, PatternRewriter &
   return success();
 }
 
+LogicalResult RemoveUnitFPtr::matchAndRewrite(mir::FPtrOp op, PatternRewriter &rewriter) const {
+  StringAttr functionName = op.getFunction().getRootReference();
+  Operation *lookedup = op->getParentOfType<ModuleOp>().lookupSymbol(op.getFunction());
+  auto funcOp = cast<func::FuncOp>(lookedup);
+
+  // The referenced function hasn't changed. Everything alright.
+  if (funcOp.getFunctionType() == op.getResult().getType())
+    return failure();
+  
+  // Update.
+  auto symref = SymbolRefAttr::get(rewriter.getContext(), functionName);
+  rewriter.replaceOpWithNewOp<mir::FPtrOp>(op, funcOp.getFunctionType(), symref);
+  return success();
+}
+
 // ------------------------------------------------------------
 // Unit Producers
 // ------------------------------------------------------------
@@ -78,7 +94,7 @@ LogicalResult RemoveUnitIntrinsic::matchAndRewrite(mir::IntrinsicOp op, PatternR
 }
 
 LogicalResult RemoveUnitCallIndirect::matchAndRewrite(func::CallIndirectOp op, PatternRewriter &rewriter) const {
-  if (op.getNumOperands() < 1 || !isa<mir::UnitType>(op.getOperand(0).getType()))
+  if (op.getNumResults() < 1 || !isa<mir::UnitType>(op.getResult(0).getType()))
     return failure();
   
   llvm::SmallVector<mlir::Type, 1> resultTypes;
@@ -111,6 +127,7 @@ void RemoveUnitPass::runOnOperation() {
   RewritePatternSet unitConsumers(ctx);
   unitConsumers.add<
     RemoveUnitFunc,
+    RemoveUnitFPtr,
     RemoveUnitReturn
   >(ctx);
 
@@ -123,6 +140,8 @@ void RemoveUnitPass::runOnOperation() {
     RemoveUnitCallIndirect,
     RemoveUnitGetUnit
   >(ctx);
+
+  (void) mlir::applyPatternsGreedily(theModule, std::move(unitProducers));
 }
 
 // Register the pass
