@@ -100,6 +100,8 @@ public:
   std::string name;
   std::vector<std::string> typeArgs;
   UnresolvedType() { }
+  UnresolvedType(std::string name, const std::vector<std::string> typeArgs = {}):
+    name(name), typeArgs(typeArgs) {}
 
   std::string toString() const override { return "<unresolved>"; }
   virtual void walk(TypeWalker) override;
@@ -113,6 +115,19 @@ public:
   virtual void walk(TypeWalker) override;
 };
 
+class StructType : public TypeImpl<StructType, 8> {
+public:
+  std::vector<Type*> fields;
+  // Generics.
+  std::vector<Type*> typeArgs;
+  StructType() { }
+  StructType(const std::vector<Type*> &fields, const std::vector<Type*> &typeArgs = {}):
+    fields(fields), typeArgs(typeArgs) {}
+
+  std::string toString() const override;
+  virtual void walk(TypeWalker) override;
+};
+  
 template<class T>
 bool isa(Type *t) {
   assert(t);

@@ -23,7 +23,7 @@ public:
     Comma, LPar, RPar, LBrak, RBrak, LBrace, RBrace,
 
     // keywords
-    If, Else, Let, While, For, Fn, Return,
+    If, Else, Let, While, For, Fn, Return, Struct,
 
     // types
     Int, Bool, FixedArray, Unit, String,

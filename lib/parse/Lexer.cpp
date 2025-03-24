@@ -13,6 +13,7 @@ std::map<std::string, Token::Type> keywords = {
   { "for", Token::For },
   { "fn", Token::Fn },
   { "return", Token::Return },
+  { "struct", Token::Struct },
   
   // Internal types.
   { "Int", Token::Int },
@@ -135,10 +136,12 @@ Token Tokenizer::nextToken() {
       value.push_back(input[loc++]);
     }
 
-    if (!closed) {
-      Diagnostics::error(str_start, Location { filename, line, loc - last_line },
-        "string literal not closed");
-    }
+    if (!closed)
+      Diagnostics::error(
+        str_start,
+        Location { filename, line, loc - last_line },
+        "string literal not closed"
+      );
 
     return Token(Token::StrLit, value, str_start);
   }
@@ -284,6 +287,7 @@ const char *mbt::stringifyToken(Token::Type t) {
     { Token::Semicolon, "';'" },
     { Token::String, "builtin-type 'string'" },
     { Token::StrLit, "string literal" },
+    { Token::Struct, "keyword 'struct'" },
     { Token::Unit, "builtin-type 'unit'" },
     { Token::While, "keyword 'while'" },
     { Token::Xor, "'^'" },

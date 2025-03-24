@@ -187,6 +187,18 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
+class StructDeclNode : public ASTNodeImpl<StructDeclNode, 11> {
+public:
+  std::string name;
+  std::vector<std::pair<std::string, Type*>> fields;
+  
+  StructDeclNode(std::string name, const decltype(fields) &fields, Location begin, Location end):
+    ASTNodeImpl(begin, end), name(name), fields(fields) {}
+
+  std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
+};
+
 template<class T>
 bool isa(ASTNode *node) {
   assert(node);

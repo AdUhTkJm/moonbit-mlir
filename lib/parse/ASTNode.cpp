@@ -130,6 +130,14 @@ bool FnCallNode::walk(ASTWalkerWithDepth walker, int depth) {
   return true;
 }
 
+std::string StructDeclNode::toString() const {
+  return std::format("Struct  {}", name);
+}
+
+bool StructDeclNode::walk(ASTWalkerWithDepth walker, int depth) {
+  return walker(this, depth);
+}
+
 void ASTNode::dump() {
   walk([&](ASTNode *node, int depth) {
     std::cerr << std::string(depth * 2, ' ') << node->toString() << "\n";

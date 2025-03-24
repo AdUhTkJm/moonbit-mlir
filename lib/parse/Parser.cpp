@@ -59,6 +59,9 @@ mbt::Type *Parser::parseType() {
   if (test(Token::String))
     return new StringType();
 
+  if (test(Token::Ident))
+    return new UnresolvedType(last().vs);
+  
   consume();
   Diagnostics::error(peek().begin, peek().end,
     std::format("expected type, but got {}", stringifyToken(peek())));
@@ -303,9 +306,27 @@ ASTNode *Parser::topFn() {
   return fn;
 }
 
+ASTNode *Parser::topStruct() {
+  Location begin = last().begin; // 'struct'
+  auto name = expect(Token::Ident).vs;
+  expect(Token::LBrace);
+
+  std::vector<std::pair<std::string, Type*>> fields;
+  while (!test(Token::RBrace)) {
+    auto field = expect(Token::Ident).vs;
+    expect(Token::Colon);
+    Type *ty = parseType();
+    fields.push_back(std::make_pair(field, ty));
+  }
+  return new StructDeclNode(name, fields, begin, last().end);
+}
+
 ASTNode *Parser::toplevel() {
   if (test(Token::Fn))
     return topFn();
+
+  if (test(Token::Struct))
+    return topStruct();
 
   return nullptr;
 }

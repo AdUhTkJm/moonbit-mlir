@@ -31,6 +31,7 @@ class Parser {
   ASTNode *stmt();
   ASTNode *toplevel();
   ASTNode *topFn();
+  ASTNode *topStruct();
 
   mbt::Type *parseType();
 

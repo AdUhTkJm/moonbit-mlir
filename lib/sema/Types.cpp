@@ -3,9 +3,9 @@
 
 using namespace mbt;
 
-std::string FunctionType::toString() const {
+std::string interleave(const std::vector<Type*> types) {
   std::stringstream ss;
-  for (auto x : paramTy)
+  for (auto x : types)
     ss << x->toString() << ", ";
   auto str = ss.str();
   // Remove the extra ", " at the end
@@ -13,11 +13,20 @@ std::string FunctionType::toString() const {
     str.pop_back();
     str.pop_back();
   }
-  return std::format("({}) -> {}", str, retTy->toString());
+  return str;
+}
+
+std::string FunctionType::toString() const {
+  return std::format("({}) -> {}", interleave(paramTy), retTy->toString());
 }
 
 std::string WeakType::toString() const {
   return std::format("'{}", id);
+}
+
+std::string StructType::toString() const {
+  // Double braces are escaping them.
+  return std::format("{{{}}}[{}]", interleave(fields), interleave(typeArgs));
 }
 
 void IntType::walk(TypeWalker walker) {
@@ -36,10 +45,20 @@ void StringType::walk(TypeWalker walker) {
   walker(this);
 }
 
+void UnresolvedType::walk(TypeWalker walker) {
+  walker(this);
+}
+
 void WeakType::walk(TypeWalker walker) {
   walker(this);
   if (real)
     real->walk(walker);
+}
+
+void StructType::walk(TypeWalker walker) {
+  walker(this);
+  for (auto type : typeArgs)
+    type->walk(walker);
 }
 
 void FunctionType::walk(TypeWalker walker) {
