@@ -19,14 +19,14 @@ public:
     BitAnd, BitOr, Xor,
     BitAndEq, BitOrEq, XorEq,
     And, Or,
-    Assign, Exclaim, Semicolon, Colon, Arrow,
+    Assign, Exclaim, Semicolon, Colon, ColonColon, Arrow,
     Comma, LPar, RPar, LBrak, RBrak, LBrace, RBrace,
 
     // keywords
     If, Else, Let, While, For, Fn, Return,
 
     // types
-    Int, Bool, FixedArray, Unit,
+    Int, Bool, FixedArray, Unit, String,
 
     // EOF
     End

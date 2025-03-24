@@ -32,6 +32,10 @@ void UnitType::walk(TypeWalker walker) {
   walker(this);
 }
 
+void StringType::walk(TypeWalker walker) {
+  walker(this);
+}
+
 void WeakType::walk(TypeWalker walker) {
   walker(this);
   if (real)

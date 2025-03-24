@@ -105,6 +105,14 @@ public:
   virtual void walk(TypeWalker) override;
 };
 
+class StringType : public TypeImpl<StringType, 7> {
+public:
+  StringType() { }
+
+  std::string toString() const override { return "string"; }
+  virtual void walk(TypeWalker) override;
+};
+
 template<class T>
 bool isa(Type *t) {
   assert(t);

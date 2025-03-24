@@ -98,12 +98,18 @@ class FnDeclNode : public ASTNodeImpl<FnDeclNode, 4> {
 public:
   constexpr static int nodeType = 4;
   std::string name;
+  // For a method, this is the name of the struct to which this `fn` belongs.
+  std::optional<std::string> belongsTo;
   ASTNode *body;
   std::vector<VarDeclNode*> params;
 
   FnDeclNode(llvm::StringRef name, const std::vector<VarDeclNode*> &params,
              ASTNode *body, Location begin, Location end):
-    ASTNodeImpl(begin, end), name(name), body(body), params(params)  {}
+    ASTNodeImpl(begin, end), name(name), belongsTo(std::nullopt), body(body), params(params)  {}
+
+  FnDeclNode(llvm::StringRef belongsTo, llvm::StringRef name, const std::vector<VarDeclNode*> &params,
+             ASTNode *body, Location begin, Location end):
+    ASTNodeImpl(begin, end), name(name), belongsTo(belongsTo), body(body), params(params)  {}
 
   std::string toString() const override;
   bool walk(ASTWalkerWithDepth, int) override;

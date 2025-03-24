@@ -19,6 +19,7 @@ std::map<std::string, Token::Type> keywords = {
   { "Bool", Token::Bool },
   { "FixedArray", Token::FixedArray },
   { "Unit", Token::Unit },
+  { "String", Token::String },
 };
 
 Tokenizer::Tokenizer(const std::string &filename, const std::string& input):
@@ -189,6 +190,9 @@ Token Tokenizer::nextToken() {
     case '^': 
       if (input[loc + 1] == '=') { loc += 2; return Token(Token::XorEq, curr_loc, 2); }
       break;
+    case ':': 
+      if (input[loc + 1] == ':') { loc += 2; return Token(Token::ColonColon, curr_loc, 2); }
+      break;
     default: break;
     }
   }
@@ -241,6 +245,7 @@ const char *mbt::stringifyToken(Token::Type t) {
     { Token::BitOrEq, "'|='" },
     { Token::Bool, "builtin-type 'Bool'" },
     { Token::Colon, "':'" },
+    { Token::ColonColon, "'::'" },
     { Token::Comma, "','" },
     { Token::Div, "'/'" },
     { Token::DivEq, "'/='" },
@@ -277,6 +282,7 @@ const char *mbt::stringifyToken(Token::Type t) {
     { Token::Return, "keyword 'return'" },
     { Token::RPar, "')'" },
     { Token::Semicolon, "';'" },
+    { Token::String, "builtin-type 'string'" },
     { Token::StrLit, "string literal" },
     { Token::Unit, "builtin-type 'unit'" },
     { Token::While, "keyword 'while'" },

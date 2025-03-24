@@ -56,6 +56,9 @@ mbt::Type *Parser::parseType() {
   if (test(Token::Unit))
     return new UnitType();
 
+  if (test(Token::String))
+    return new StringType();
+
   consume();
   Diagnostics::error(peek().begin, peek().end,
     std::format("expected type, but got {}", stringifyToken(peek())));
@@ -238,8 +241,18 @@ ASTNode *Parser::stmt() {
 
 ASTNode *Parser::topFn() {
   Location begin = last().begin; // 'fn'
-  auto name = expect(Token::Ident).vs;
-  
+  auto ident = expect(Token::Ident).vs;
+  std::string name;
+  std::optional<std::string> belongsTo;
+
+  // `ident` is actually the name of a struct.
+  if (test(Token::ColonColon)) {
+    belongsTo = ident;
+    name = expect(Token::Ident).vs;
+  } else {
+    name = ident;
+  }
+
   std::vector<VarDeclNode*> params;
   std::vector<Type*> paramTy;
   Type *fnTy = nullptr;
@@ -283,7 +296,9 @@ ASTNode *Parser::topFn() {
     body = blockStmt();
   }
 
-  auto fn = new FnDeclNode(name, params, body, begin, body->end);
+  auto fn = belongsTo
+    ? new FnDeclNode(*belongsTo, name, params, body, begin, body->end)
+    : new FnDeclNode(name, params, body, begin, body->end);
   fn->type = fnTy;
   return fn;
 }
