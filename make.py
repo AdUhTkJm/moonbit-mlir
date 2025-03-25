@@ -17,6 +17,7 @@ os.chdir("build")
 if args.cmake:
   proc.run("cmake -G Ninja -DCMAKE_CXX_COMPILER=clang++ ..", shell=True)
 
-proc.run("ninja -j6", shell=True)
+proc.run("ninja -j16", shell=True)
+print("Done.")
 if args.test:
   proc.run(f"{GDB}lib/main/moonc ../test/{args.test}", shell=True)

@@ -74,9 +74,10 @@ ASTNode *Parser::primary() {
     return new IntLiteralNode(tok.vi, tok.begin, tok.end);
   }
   
-  if (peek(Token::Ident)) {
-    auto tok = consume();
-    return new VarNode(tok.vs, tok.begin, tok.end);
+  if (test(Token::Ident)) {
+    Location begin = last().begin;
+    auto ident = last().vs;
+    return new VarNode(ident, begin, last().end);
   }
 
   if (test(Token::LPar)) {
@@ -92,9 +93,21 @@ ASTNode *Parser::primary() {
   return nullptr;
 }
 
-ASTNode *Parser::callExpr() {
+ASTNode *Parser::memAccessExpr() {
   auto begin = peek().begin;
   auto x = primary();
+
+  while (test(Token::Dot)) {
+    auto ident = expect(Token::Ident).vs;
+    x = new MemAccessNode(x, ident, begin, last().end);
+  }
+
+  return x;
+}
+
+ASTNode *Parser::callExpr() {
+  auto begin = peek().begin;
+  auto x = memAccessExpr();
   
   // A function call.
   while (test(Token::LPar)) {
@@ -299,6 +312,9 @@ ASTNode *Parser::topFn() {
     body = blockStmt();
   }
 
+  // Optional ';'
+  test(Token::Semicolon);
+
   auto fn = belongsTo
     ? new FnDeclNode(*belongsTo, name, params, body, begin, body->end)
     : new FnDeclNode(name, params, body, begin, body->end);
@@ -318,6 +334,9 @@ ASTNode *Parser::topStruct() {
     Type *ty = parseType();
     fields.push_back(std::make_pair(field, ty));
   }
+
+  // Optional ';'
+  test(Token::Semicolon);
   return new StructDeclNode(name, fields, begin, last().end);
 }
 
@@ -328,6 +347,10 @@ ASTNode *Parser::toplevel() {
   if (test(Token::Struct))
     return topStruct();
 
+  consume();
+  Diagnostics::error(last().begin, last().end,
+    std::format("unknown top-level character: {}", stringifyToken(last()))
+  );
   return nullptr;
 }
 

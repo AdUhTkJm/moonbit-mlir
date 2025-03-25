@@ -138,6 +138,14 @@ bool StructDeclNode::walk(ASTWalkerWithDepth walker, int depth) {
   return walker(this, depth);
 }
 
+std::string MemAccessNode::toString() const {
+  return std::format("AccessMember  {}", memName);
+}
+
+bool MemAccessNode::walk(ASTWalkerWithDepth walker, int depth) {
+  return walker(this, depth) && record->walk(walker, depth + 1);
+}
+
 void ASTNode::dump() {
   walk([&](ASTNode *node, int depth) {
     std::cerr << std::string(depth * 2, ' ') << node->toString() << "\n";

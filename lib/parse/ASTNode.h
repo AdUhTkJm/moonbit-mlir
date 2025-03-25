@@ -199,6 +199,18 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
+class MemAccessNode : public ASTNodeImpl<MemAccessNode, 12> {
+public:
+  ASTNode *record;
+  std::string memName;
+  
+  MemAccessNode(ASTNode *record, std::string memName, Location begin, Location end):
+    ASTNodeImpl(begin, end), record(record), memName(memName) {}
+
+  std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
+};
+
 template<class T>
 bool isa(ASTNode *node) {
   assert(node);

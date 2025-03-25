@@ -223,6 +223,7 @@ Token Tokenizer::nextToken() {
   case ',': loc++; return Token(Token::Comma, curr_loc, 1);
   case '{': loc++; return Token(Token::LBrace, curr_loc, 1);
   case '}': loc++; return Token(Token::RBrace, curr_loc, 1);
+  case '.': loc++; return Token(Token::Dot, curr_loc, 1);
   default:
     Diagnostics::error(curr_loc, curr_loc, std::format("unexpected character: {}", c));
     loc++; return nextToken();
@@ -252,6 +253,7 @@ const char *mbt::stringifyToken(Token::Type t) {
     { Token::Comma, "','" },
     { Token::Div, "'/'" },
     { Token::DivEq, "'/='" },
+    { Token::Dot, "'.'" },
     { Token::Else, "keyword 'else'" },
     { Token::End, "EOF" },
     { Token::Eq, "'=='" },
