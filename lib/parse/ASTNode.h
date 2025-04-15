@@ -1,6 +1,7 @@
 #ifndef AST_NODES_H
 #define AST_NODES_H
 
+#include "Identifier.h"
 #include "lib/utils/Common.h"
 #include "lib/sema/Types.h"
 #include "llvm/ADT/StringRef.h"
@@ -84,7 +85,7 @@ public:
 
 class VarDeclNode : public ASTNodeImpl<VarDeclNode, 3> {
 public:
-  std::string name;
+  Identifier name;
   ASTNode *init;
 
   VarDeclNode(llvm::StringRef name, ASTNode *init, Location begin, Location end):
@@ -97,7 +98,7 @@ public:
 class FnDeclNode : public ASTNodeImpl<FnDeclNode, 4> {
 public:
   constexpr static int nodeType = 4;
-  std::string name;
+  Identifier name;
   // For a method, this is the name of the struct to which this `fn` belongs.
   std::optional<std::string> belongsTo;
   ASTNode *body;
@@ -139,9 +140,9 @@ public:
 
 class VarNode : public ASTNodeImpl<VarNode, 7> {
 public:
-  std::string name;
+  Identifier name;
 
-  VarNode(std::string name, Location begin, Location end):
+  VarNode(Identifier name, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name) {}
 
   std::string toString() const override;
@@ -168,7 +169,7 @@ class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 9> {
 public:
   std::string intrinsic;
   
-  IntrinsicNode(std::string name, Location begin, Location end):
+  IntrinsicNode(Identifier name, Location begin, Location end):
     ASTNodeImpl(begin, end), intrinsic(name) {}
 
   std::string toString() const override;
@@ -189,10 +190,10 @@ public:
 
 class StructDeclNode : public ASTNodeImpl<StructDeclNode, 11> {
 public:
-  std::string name;
+  Identifier name;
   std::vector<std::pair<std::string, Type*>> fields;
   
-  StructDeclNode(std::string name, const decltype(fields) &fields, Location begin, Location end):
+  StructDeclNode(Identifier name, const decltype(fields) &fields, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), fields(fields) {}
 
   std::string toString() const override;
@@ -202,10 +203,21 @@ public:
 class MemAccessNode : public ASTNodeImpl<MemAccessNode, 12> {
 public:
   ASTNode *record;
-  std::string memName;
+  Identifier memName;
   
-  MemAccessNode(ASTNode *record, std::string memName, Location begin, Location end):
+  MemAccessNode(ASTNode *record, Identifier memName, Location begin, Location end):
     ASTNodeImpl(begin, end), record(record), memName(memName) {}
+
+  std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
+};
+
+class InitializerNode : public ASTNodeImpl<InitializerNode, 12> {
+public:
+  std::vector<std::pair<Identifier, ASTNode*>> inits;
+  
+  InitializerNode(const decltype(inits) &inits, Location begin, Location end):
+    ASTNodeImpl(begin, end), inits(inits) {}
 
   std::string toString() const override;
   bool walk(ASTWalkerWithDepth, int) override;

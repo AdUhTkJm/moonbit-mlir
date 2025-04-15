@@ -207,7 +207,7 @@ void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
   builder.setInsertionPointToEnd(theModule.getBody());
   auto type = cast<mlir::FunctionType>(getTy(globalFn->type));
   auto loc = getLoc(globalFn);
-  auto funcOp = builder.create<func::FuncOp>(loc, globalFn->name, type);
+  auto funcOp = builder.create<func::FuncOp>(loc, (std::string) globalFn->name, type);
   builder.setInsertionPointToStart(funcOp.addEntryBlock());
 
   // Resets symbol table when destroyed.

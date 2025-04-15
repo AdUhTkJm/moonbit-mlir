@@ -1,2 +1,6 @@
 build
 .vscode
+.cache
+
+# Generate it with `bear`.
+compile_commands.json

@@ -2,6 +2,7 @@ set(PARSE_SOURCES
   Lexer.cpp
   Parser.cpp
   ASTNode.cpp
+  Identifier.cpp
 )
 
 add_library(LibParse STATIC ${PARSE_SOURCES})
