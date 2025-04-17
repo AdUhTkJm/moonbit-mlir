@@ -51,8 +51,8 @@ def FetchGlobalOp : MoonOp<"fetch_global"> {
   let assemblyFormat = "$global_name `:` type($result) attr-dict";
 }
 
-def FPtrOp : MoonOp<"fptr", [Pure]> {
-  let summary = "Fetches a function pointer based on the global.";
+def ClosureOp : MoonOp<"closure", [Pure]> {
+  let summary = "Creates a closure.";
   
   let arguments = (ins SymbolRefAttr:$function);
   let results = (outs AnyType:$result);

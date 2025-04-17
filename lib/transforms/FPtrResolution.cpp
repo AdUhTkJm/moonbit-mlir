@@ -19,7 +19,7 @@ LogicalResult FPtrCallIndirectRewriter::matchAndRewrite(func::CallIndirectOp op,
   
   // This is a deterministic function pointer.
   // Replace it with an ordinary call op.
-  if (auto fptr = dyn_cast<mir::FPtrOp>(function.getDefiningOp())) {
+  if (auto fptr = dyn_cast<mir::ClosureOp>(function.getDefiningOp())) {
     rewriter.replaceOpWithNewOp<func::CallOp>(op,
       fptr.getFunction(), op.getResultTypes(), op.getArgOperands());
     return success();

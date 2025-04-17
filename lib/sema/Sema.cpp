@@ -103,7 +103,7 @@ Type *TypeInferrer::inferFn(FnDeclNode *fn) {
   }
   
   if (fn->type) {
-    typeMap[fn->name] = fn->type;
+    typeMap[fn->name.mangle()] = fn->type;
 
     auto fnTy = cast<FunctionType>(fn->type);
     if (fnTy->retTy && !unify(fnTy->retTy, retTy)) {
@@ -116,7 +116,7 @@ Type *TypeInferrer::inferFn(FnDeclNode *fn) {
   }
 
   fn->type = new FunctionType(paramsTy, retTy);
-  typeMap[fn->name] = fn->type;
+  typeMap[fn->name.mangle()] = fn->type;
   return new UnitType();
 }
 
@@ -167,17 +167,17 @@ Type *TypeInferrer::inferVarDecl(VarDeclNode *decl) {
   // This is a function parameter.
   if (!decl->init) {
     if (decl->type)
-      return typeMap[decl->name] = decl->type;
+      return typeMap[decl->name.mangle()] = decl->type;
 
-    return typeMap[decl->name] = decl->type = fresh();
+    return typeMap[decl->name.mangle()] = decl->type = fresh();
   }
 
   Type *ty = infer(decl->init);
-  typeMap[decl->name] = ty;
+  typeMap[decl->name.mangle()] = ty;
   if (decl->type && !unify(decl->type, ty)) {
     Diagnostics::error(decl->begin, decl->end,
       std::format("variable {} with type {} cannot accept this initializer (type {})",
-        decl->name, decl->type->toString(), ty->toString()));
+        decl->name.mangle(), decl->type->toString(), ty->toString()));
 
     return new UnitType();
   }
@@ -220,8 +220,8 @@ Type *TypeInferrer::infer(ASTNode *node) {
   assert(node);
   
   if (auto var = dyn_cast<VarNode>(node)) {
-    if (typeMap.contains(var->name))
-      return var->type = typeMap[var->name];
+    if (typeMap.contains(var->name.mangle()))
+      return var->type = typeMap[var->name.mangle()];
 
     return var->type = fresh();
   }

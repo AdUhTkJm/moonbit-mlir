@@ -14,6 +14,9 @@ void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule) {
 
   pm.addPass(mbt::createRemoveUnitPass());
 
+  // Lowers intrinsic calls.
+  pm.addPass(mbt::createLowerIntrinsicPass());
+
   // This fptr resolution creates some dead values.
   // Eliminate them by DCE pass.
   pm.addPass(mbt::createFPtrResolutionPass());

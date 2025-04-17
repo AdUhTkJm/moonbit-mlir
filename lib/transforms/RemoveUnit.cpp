@@ -19,7 +19,7 @@ REMOVE_UNIT_REWRITER(Intrinsic, mir::IntrinsicOp);
 REMOVE_UNIT_REWRITER(Return, func::ReturnOp);
 REMOVE_UNIT_REWRITER(Func, func::FuncOp);
 REMOVE_UNIT_REWRITER(CallIndirect, func::CallIndirectOp);
-REMOVE_UNIT_REWRITER(FPtr, mir::FPtrOp);
+REMOVE_UNIT_REWRITER(FPtr, mir::ClosureOp);
 REMOVE_UNIT_REWRITER(GetUnit, mir::GetUnitOp);
 
 // ------------------------------------------------------------
@@ -60,7 +60,7 @@ LogicalResult RemoveUnitFunc::matchAndRewrite(func::FuncOp op, PatternRewriter &
   return success();
 }
 
-LogicalResult RemoveUnitFPtr::matchAndRewrite(mir::FPtrOp op, PatternRewriter &rewriter) const {
+LogicalResult RemoveUnitFPtr::matchAndRewrite(mir::ClosureOp op, PatternRewriter &rewriter) const {
   StringAttr functionName = op.getFunction().getRootReference();
   Operation *lookedup = op->getParentOfType<ModuleOp>().lookupSymbol(op.getFunction());
   auto funcOp = cast<func::FuncOp>(lookedup);
@@ -71,7 +71,7 @@ LogicalResult RemoveUnitFPtr::matchAndRewrite(mir::FPtrOp op, PatternRewriter &r
   
   // Update.
   auto symref = SymbolRefAttr::get(rewriter.getContext(), functionName);
-  rewriter.replaceOpWithNewOp<mir::FPtrOp>(op, funcOp.getFunctionType(), symref);
+  rewriter.replaceOpWithNewOp<mir::ClosureOp>(op, funcOp.getFunctionType(), symref);
   return success();
 }
 

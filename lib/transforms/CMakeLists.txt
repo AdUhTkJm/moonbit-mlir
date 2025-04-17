@@ -3,6 +3,7 @@ set(TRANSFORMS_SOURCES
   RemoveUnit.cpp
   FPtrResolution.cpp
   LLVMLowering.cpp
+  LowerIntrinsic.cpp
 )
 
 add_library(LibTransforms STATIC ${TRANSFORMS_SOURCES})

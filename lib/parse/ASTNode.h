@@ -169,7 +169,7 @@ class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 9> {
 public:
   std::string intrinsic;
   
-  IntrinsicNode(Identifier name, Location begin, Location end):
+  IntrinsicNode(std::string name, Location begin, Location end):
     ASTNodeImpl(begin, end), intrinsic(name) {}
 
   std::string toString() const override;

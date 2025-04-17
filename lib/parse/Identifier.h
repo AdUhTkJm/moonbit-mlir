@@ -16,11 +16,17 @@ class Identifier {
   std::string package;
   std::string record;
   std::string name;
+
+  // A cache for the name.
+  std::string mangled;
+  std::string mangleImpl() const;
 public:
   Identifier() {}
   Identifier(llvm::StringRef str);
   Identifier(std::string str);
-  operator std::string() const;
+  
+  llvm::StringRef getName() const { return name; }
+  std::string mangle() const { return mangled; }
 };
 
 } // namespace mbt
@@ -34,7 +40,7 @@ public:
 
   template <typename FormatContext>
   auto format(const mbt::Identifier& ident, FormatContext& ctx) const {
-    return std::format_to(ctx.out(), "{}", (std::string) ident);
+    return std::format_to(ctx.out(), "{}", ident.mangle());
   }
 };
 

@@ -1,7 +1,6 @@
 #include "CGModule.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "lib/dialect/MoonOps.h"
 
 using namespace mbt;
@@ -141,7 +140,7 @@ mlir::Value CGModule::getVariable(mlir::Location loc, const std::string &name) {
 
   if (auto fn = dyn_cast<func::FuncOp>(global))
     // We're referring to a function. We must emit a function pointer for this.
-    return builder.create<mir::FPtrOp>(loc, fn.getFunctionType(), symref);
+    return builder.create<mir::ClosureOp>(loc, fn.getFunctionType(), symref);
 
   // A normal variable.
   auto var = dyn_cast<mir::GlobalOp>(global);
@@ -164,7 +163,7 @@ mlir::Value CGModule::emitExpr(ASTNode *node) {
   }
 
   if (auto var = dyn_cast<VarNode>(node))
-    return getVariable(getLoc(node), var->name);
+    return getVariable(getLoc(node), var->name.mangle());
 
   if (auto call = dyn_cast<FnCallNode>(node))
     return emitCallExpr(call);
@@ -188,7 +187,7 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
   if (auto varDecl = dyn_cast<VarDeclNode>(node)) {
     auto loc = getLoc(node);
     auto value = emitExpr(varDecl->init);
-    symbolTable[varDecl->name] = value;
+    symbolTable[varDecl->name.mangle()] = value;
     return builder.create<mir::GetUnitOp>(loc);
   }
 
@@ -197,7 +196,7 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
 
 void CGModule::emitFunctionPrologue(func::FuncOp funcOp, FnDeclNode *fn) {
   for (auto [i, argDecl] : llvm::enumerate(fn->params))
-    symbolTable[argDecl->name] = funcOp.getArgument(i);
+    symbolTable[argDecl->name.mangle()] = funcOp.getArgument(i);
 }
 
 void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
@@ -207,7 +206,7 @@ void CGModule::emitGlobalFn(FnDeclNode *globalFn) {
   builder.setInsertionPointToEnd(theModule.getBody());
   auto type = cast<mlir::FunctionType>(getTy(globalFn->type));
   auto loc = getLoc(globalFn);
-  auto funcOp = builder.create<func::FuncOp>(loc, (std::string) globalFn->name, type);
+  auto funcOp = builder.create<func::FuncOp>(loc, globalFn->name.mangle(), type);
   builder.setInsertionPointToStart(funcOp.addEntryBlock());
 
   // Resets symbol table when destroyed.

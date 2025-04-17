@@ -14,6 +14,9 @@ std::unique_ptr<mlir::Pass> createRemoveUnitPass();
 // Resolves indirect calls to function pointers, if they are fixed at compile type.
 std::unique_ptr<mlir::Pass> createFPtrResolutionPass();
 
+// Lowers mbt::IntrinsicOp.
+std::unique_ptr<mlir::Pass> createLowerIntrinsicPass();
+
 } // namespace mbt
 
 #endif
