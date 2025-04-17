@@ -1,7 +1,9 @@
 #include "CGModule.h"
+#include "lib/parse/ASTNode.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "lib/dialect/MoonOps.h"
+#include "mlir/IR/Builders.h"
 
 using namespace mbt;
 using namespace mlir;
@@ -39,6 +41,14 @@ mlir::Location CGModule::getLoc(Location loc) {
 
 mlir::Location CGModule::getLoc(ASTNode *node) {
   return mlir::FusedLoc::get(&ctx, { getLoc(node->begin), getLoc(node->end) });
+}
+
+mir::PointerType CGModule::pointerTo(mlir::Type ty) {
+  return mir::PointerType::get(ty.getContext(), ty);
+}
+
+mlir::Value CGModule::createAlloca(mlir::Location loc, mlir::Type ty) {
+  return builder.create<mir::AllocaOp>(loc, pointerTo(ty), ty);
 }
 
 mlir::Type CGModule::getTy(mbt::Type *ty) {
@@ -131,8 +141,14 @@ mlir::Value CGModule::emitCallExpr(FnCallNode *node) {
 }
 
 mlir::Value CGModule::getVariable(mlir::Location loc, const std::string &name) {
-  if (symbolTable.contains(name))
-    return symbolTable[name];
+  if (symbolTable.contains(name)) {
+    auto [value, mut] = symbolTable[name];
+    if (mut) {
+      auto ptrType = cast<mir::PointerType>(value.getType());
+      return builder.create<mir::LoadOp>(loc, ptrType.getPointee(), value);
+    }
+    return value;
+  }
 
   // This must have been a global.
   auto global = theModule.lookupSymbol(name);
@@ -147,11 +163,48 @@ mlir::Value CGModule::getVariable(mlir::Location loc, const std::string &name) {
   return builder.create<mir::FetchGlobalOp>(loc, var.getType(), symref);
 }
 
+mlir::Value CGModule::emitAssign(AssignNode *node) {
+  auto loc = getLoc(node);
+  auto value = emitExpr(node->rhs);
+  auto variable = getVariable(loc, node->lhs->name.mangle());
+
+  // If getVariable() finds a global, then it must be:
+  //   moon.fetch_global @a
+  // Now we have to transform it to
+  //   %1 = moon.addressof @a
+  //   moon.store %value, %1
+  if (auto fetchGlobal = dyn_cast<mir::FetchGlobalOp>(variable.getDefiningOp())) {
+    auto global = fetchGlobal.getGlobalName();
+    OpBuilder builder(fetchGlobal);
+    auto globalPtrTy = pointerTo(fetchGlobal.getResult().getType());
+    auto globalAddr = builder.create<mir::AddressofOp>(loc, globalPtrTy, global);
+    builder.create<mir::StoreOp>(loc, value, /*base=*/globalAddr);
+    auto unit = builder.create<mir::GetUnitOp>(loc);
+    fetchGlobal.erase();
+    return unit;
+  }
+
+  // If getVariable() finds a local, then it emits:
+  //   moon.load %base
+  // We must transform this to
+  //   moon.store %value, %base
+  auto load = cast<mir::LoadOp>(variable.getDefiningOp());
+  auto base = load.getBase();
+  OpBuilder builder(load);
+  builder.create<mir::StoreOp>(loc, value, base);
+  auto unit = builder.create<mir::GetUnitOp>(loc);
+  load.erase();
+  return unit;
+}
+
 mlir::Value CGModule::emitExpr(ASTNode *node) {
   assert(node);
 
   if (auto binary = dyn_cast<BinaryNode>(node))
     return emitBinaryExpr(binary);
+
+  if (auto assign = dyn_cast<AssignNode>(node))
+    return emitAssign(assign);
 
   if (auto ifexpr = dyn_cast<IfNode>(node))
     return emitIfExpr(ifexpr);
@@ -187,7 +240,14 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
   if (auto varDecl = dyn_cast<VarDeclNode>(node)) {
     auto loc = getLoc(node);
     auto value = emitExpr(varDecl->init);
-    symbolTable[varDecl->name.mangle()] = value;
+    auto mangledName = varDecl->name.mangle();
+    if (varDecl->mut) {
+      auto address = createAlloca(loc, value.getType());
+      symbolTable[mangledName] = { .value = address, .mut = true };
+      return builder.create<mir::GetUnitOp>(loc);
+    }
+
+    symbolTable[mangledName] = { .value = value, .mut = false };
     return builder.create<mir::GetUnitOp>(loc);
   }
 
@@ -196,7 +256,11 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
 
 void CGModule::emitFunctionPrologue(func::FuncOp funcOp, FnDeclNode *fn) {
   for (auto [i, argDecl] : llvm::enumerate(fn->params))
-    symbolTable[argDecl->name.mangle()] = funcOp.getArgument(i);
+    // Function parameters are never mutable.
+    symbolTable[argDecl->name.mangle()] = {
+      .value = funcOp.getArgument(i),
+      .mut = false
+    };
 }
 
 void CGModule::emitGlobalFn(FnDeclNode *globalFn) {

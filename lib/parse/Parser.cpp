@@ -1,4 +1,6 @@
 #include "Parser.h"
+#include "ASTNode.h"
+#include "lib/utils/Diagnostics.h"
 
 using namespace mbt;
 
@@ -217,14 +219,30 @@ ASTNode *Parser::blockStmt() {
   return block;
 }
 
+ASTNode *Parser::assignStmt(ASTNode *lhs) {
+  if (auto var = dyn_cast<VarNode>(lhs)) {
+    auto node = new AssignNode(var, expr(), lhs->begin, last().end);
+
+    // Optional semicolon.
+    test(Token::Semicolon);
+    return node;
+  }
+
+  Diagnostics::error(lhs->begin, lhs->end,
+    "left-hand side of '=' must be a variable");
+  return nullptr;
+}
+
 ASTNode *Parser::stmt() {
   if (test(Token::Let)) {
     Location begin = last().begin;
     // let (a, b, c) (: Type)? = Expr;
     if (test(Token::LPar))
       assert(false && "NYI");
+
+    bool mut = test(Token::Mut);
     
-    // let x (: Type)? = Expr;
+    // let (mut)? x (: Type)? = Expr;
     auto name = expect(Token::Ident).vs;
 
     // if there's no name, `expect` would have reported an error
@@ -241,7 +259,7 @@ ASTNode *Parser::stmt() {
     // Optional semicolon.
     test(Token::Semicolon);
     
-    auto decl = new VarDeclNode(name, init, begin, last().end);
+    auto decl = new VarDeclNode(name, init, mut, begin, last().end);
     decl->type = ty;
     return decl;
   }
@@ -250,6 +268,9 @@ ASTNode *Parser::stmt() {
     return blockStmt();
 
   auto x = expr();
+  if (test(Token::Assign))
+    return assignStmt(x);
+
   // Optional semicolon.
   test(Token::Semicolon);
   return x;

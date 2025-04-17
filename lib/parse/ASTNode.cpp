@@ -159,6 +159,14 @@ bool InitializerNode::walk(ASTWalkerWithDepth walker, int depth) {
   return true;
 }
 
+std::string AssignNode::toString() const {
+  return "Assign";
+}
+
+bool AssignNode::walk(ASTWalkerWithDepth walker, int depth) {
+  return walker(this, depth) && lhs->walk(walker, depth + 1) && rhs->walk(walker, depth + 1);
+}
+
 void ASTNode::dump() {
   walk([&](ASTNode *node, int depth) {
     std::cerr << std::string(depth * 2, ' ') << node->toString() << "\n";

@@ -4,6 +4,7 @@ set(TRANSFORMS_SOURCES
   FPtrResolution.cpp
   LLVMLowering.cpp
   LowerIntrinsic.cpp
+  MIRToLLVM.cpp
 )
 
 add_library(LibTransforms STATIC ${TRANSFORMS_SOURCES})

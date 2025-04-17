@@ -2,11 +2,14 @@
 #define SEMA_H
 
 #include "lib/parse/ASTNode.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace mbt {
 
 class TypeInferrer {
-  std::map<std::string, Type*> typeMap;
+  llvm::StringMap<Type*> typeMap;
+  llvm::StringSet<> mutables;
   int id = 0;
 
   // Create a brand-new WeakType instance.
@@ -23,6 +26,7 @@ class TypeInferrer {
   Type *inferVarDecl(VarDeclNode *decl);
   Type *inferBinary(BinaryNode *binary);
   Type *inferCall(FnCallNode *call);
+  Type *inferAssign(AssignNode *assign);
 
   struct SemanticScope {
     decltype(typeMap) oldMap;

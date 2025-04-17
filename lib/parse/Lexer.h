@@ -24,7 +24,7 @@ public:
     Dot,
 
     // keywords
-    If, Else, Let, While, For, Fn, Return, Struct,
+    If, Else, Let, While, For, Fn, Return, Struct, Mut,
 
     // types
     Int, Bool, FixedArray, Unit, String,

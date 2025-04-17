@@ -3,6 +3,7 @@
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
+#include <memory>
 
 namespace mbt {
 
@@ -16,6 +17,9 @@ std::unique_ptr<mlir::Pass> createFPtrResolutionPass();
 
 // Lowers mbt::IntrinsicOp.
 std::unique_ptr<mlir::Pass> createLowerIntrinsicPass();
+
+// Lowers all MoonIR-specific operations.
+std::unique_ptr<mlir::Pass> createMIRToLLVMPass();
 
 } // namespace mbt
 

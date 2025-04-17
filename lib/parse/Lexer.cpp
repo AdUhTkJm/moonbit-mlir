@@ -11,6 +11,7 @@ std::map<std::string, Token::Type> keywords = {
   { "let", Token::Let },
   { "while", Token::While },
   { "for", Token::For },
+  { "mut", Token::Mut },
   { "fn", Token::Fn },
   { "return", Token::Return },
   { "struct", Token::Struct },

@@ -19,7 +19,7 @@ def UnitType : MoonType<"Unit", "unit"> {
 def PointerType : MoonType<"Pointer", "ptr"> {
   let summary = "A transparent pointer, as opposed to opaque ones in LLVM IR.";
 
-  let parameters = (ins "mlir::Type":$pointee);
+  let parameters = (ins AnyType:$pointee);
 
   let assemblyFormat = [{
     `<` $pointee `>`

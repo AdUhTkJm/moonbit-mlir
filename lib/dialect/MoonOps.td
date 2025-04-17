@@ -72,4 +72,38 @@ def IntrinsicOp : MoonOp<"intrinsic"> {
   }];
 }
 
+def AllocaOp : MoonOp<"alloca"> {
+  let summary = "Allocates on stack.";
+
+  let arguments = (ins TypeAttr:$type);
+  let results = (outs PointerType:$result);
+
+  let assemblyFormat = [{
+    `:` $type `->` type($result) attr-dict
+  }];
+}
+
+def LoadOp : MoonOp<"load"> {
+  let summary = "Loads from memory.";
+
+  let arguments = (ins AnyType:$base);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    $base `:` type($base) `->` type($result) attr-dict
+  }];
+}
+
+def StoreOp : MoonOp<"store"> {
+  let summary = "Stores to memory.";
+
+  let arguments = (ins AnyType:$value,
+                       AnyType:$base);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,` $base `:` type($base) attr-dict
+  }];
+}
+
 #endif

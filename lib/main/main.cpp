@@ -4,6 +4,7 @@
 #include "lib/sema/Sema.h"
 #include "lib/transforms/MoonPasses.h"
 #include "lib/transforms/LLVMLowering.h"
+#include "llvm/IR/Module.h"
 #include <fstream>
 #include <sstream>
 

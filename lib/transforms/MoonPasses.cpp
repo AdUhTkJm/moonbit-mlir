@@ -22,6 +22,9 @@ void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule) {
   pm.addPass(mbt::createFPtrResolutionPass());
   pm.addPass(mlir::createRemoveDeadValuesPass());
 
+  // Convert MoonIR to LLVM IR.
+  pm.addPass(mbt::createMIRToLLVMPass());
+
   // Convert MLIR builtin dialects to LLVM IR.
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createSCFToControlFlowPass());

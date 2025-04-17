@@ -34,6 +34,8 @@ class Parser {
   ASTNode *topFn();
   ASTNode *topStruct();
 
+  ASTNode *assignStmt(ASTNode *lhs);
+
   mbt::Type *parseType();
 
 public:

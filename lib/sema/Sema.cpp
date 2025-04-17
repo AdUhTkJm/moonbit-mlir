@@ -1,4 +1,5 @@
 #include "Sema.h"
+#include "lib/parse/ASTNode.h"
 #include "lib/utils/Diagnostics.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -163,21 +164,40 @@ Type *TypeInferrer::inferBinary(BinaryNode *binary) {
   }
 }
 
+Type *TypeInferrer::inferAssign(AssignNode *assign) {
+  Type *lty = infer(assign->lhs);
+  Type *rty = infer(assign->rhs);
+  if (!unify(lty, rty)) {
+    Diagnostics::error(assign->begin, assign->end,
+      std::format("cannot assign {} to {}", rty->toString(), lty->toString()));
+  }
+  if (!mutables.contains(assign->lhs->name.mangle())) {
+    Diagnostics::error(assign->lhs->begin, assign->lhs->end,
+      "cannot assign to immutable variable");
+  }
+
+  return assign->type = new UnitType();
+}
+
 Type *TypeInferrer::inferVarDecl(VarDeclNode *decl) {
+  auto mangledName = decl->name.mangle();
   // This is a function parameter.
   if (!decl->init) {
     if (decl->type)
-      return typeMap[decl->name.mangle()] = decl->type;
+      return typeMap[mangledName] = decl->type;
 
-    return typeMap[decl->name.mangle()] = decl->type = fresh();
+    return typeMap[mangledName] = decl->type = fresh();
   }
 
+  if (decl->mut)
+    mutables.insert(mangledName);
+
   Type *ty = infer(decl->init);
-  typeMap[decl->name.mangle()] = ty;
+  typeMap[mangledName] = ty;
   if (decl->type && !unify(decl->type, ty)) {
     Diagnostics::error(decl->begin, decl->end,
       std::format("variable {} with type {} cannot accept this initializer (type {})",
-        decl->name.mangle(), decl->type->toString(), ty->toString()));
+        mangledName, decl->type->toString(), ty->toString()));
 
     return new UnitType();
   }
@@ -231,6 +251,9 @@ Type *TypeInferrer::infer(ASTNode *node) {
 
   if (auto binary = dyn_cast<BinaryNode>(node))
     return inferBinary(binary);
+
+  if (auto assign = dyn_cast<AssignNode>(node))
+    return inferAssign(assign);
 
   if (auto intLit = dyn_cast<IntLiteralNode>(node))
     return intLit->type = new IntType();

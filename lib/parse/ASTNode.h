@@ -87,9 +87,14 @@ class VarDeclNode : public ASTNodeImpl<VarDeclNode, 3> {
 public:
   Identifier name;
   ASTNode *init;
+  bool mut;
 
+  VarDeclNode(llvm::StringRef name, ASTNode *init, bool mut, Location begin, Location end):
+    ASTNodeImpl(begin, end), name(name), init(init), mut(mut) {}
+
+  // Immutable variables as default.
   VarDeclNode(llvm::StringRef name, ASTNode *init, Location begin, Location end):
-    ASTNodeImpl(begin, end), name(name), init(init) {}
+    ASTNodeImpl(begin, end), name(name), init(init), mut(false) {}
 
   std::string toString() const override;
   bool walk(ASTWalkerWithDepth, int) override;
@@ -212,12 +217,25 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class InitializerNode : public ASTNodeImpl<InitializerNode, 12> {
+// For struct initializers; i.e. things like { x : 0, y : 0 }
+class InitializerNode : public ASTNodeImpl<InitializerNode, 13> {
 public:
   std::vector<std::pair<Identifier, ASTNode*>> inits;
   
   InitializerNode(const decltype(inits) &inits, Location begin, Location end):
     ASTNodeImpl(begin, end), inits(inits) {}
+
+  std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
+};
+
+class AssignNode : public ASTNodeImpl<AssignNode, 14> {
+public:
+  VarNode *lhs;
+  ASTNode *rhs;
+  
+  AssignNode(VarNode *lhs, ASTNode *rhs, Location begin, Location end):
+    ASTNodeImpl(begin, end), lhs(lhs), rhs(rhs) {}
 
   std::string toString() const override;
   bool walk(ASTWalkerWithDepth, int) override;
