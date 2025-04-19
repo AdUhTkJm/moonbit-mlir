@@ -220,8 +220,21 @@ ASTNode *Parser::blockStmt() {
 }
 
 ASTNode *Parser::assignStmt(ASTNode *lhs) {
+  static std::map<Token::Type, BinaryNode::Type> mapping = {
+    { Token::PlusEq, BinaryNode::Add },
+    { Token::MinusEq, BinaryNode::Sub },
+    { Token::MulEq, BinaryNode::Mul },
+    { Token::DivEq, BinaryNode::Div },
+    { Token::ModEq, BinaryNode::Mod },
+  };
+
+  auto op = last();
   if (auto var = dyn_cast<VarNode>(lhs)) {
-    auto node = new AssignNode(var, expr(), lhs->begin, last().end);
+    auto n = expr();
+    ASTNode *rhs = op.ty == Token::Assign
+      ? n
+      : new BinaryNode(mapping[op.ty], var, n, lhs->begin, last().end);
+    auto node = new AssignNode(var, rhs, lhs->begin, last().end);
 
     // Optional semicolon.
     test(Token::Semicolon);
@@ -268,7 +281,9 @@ ASTNode *Parser::stmt() {
     return blockStmt();
 
   auto x = expr();
-  if (test(Token::Assign))
+  if (test(Token::Assign)
+   || test(Token::PlusEq) || test(Token::MinusEq) || test(Token::MulEq) || test(Token::DivEq)
+   || test(Token::ModEq))
     return assignStmt(x);
 
   // Optional semicolon.

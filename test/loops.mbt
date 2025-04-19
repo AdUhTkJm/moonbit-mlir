@@ -7,5 +7,6 @@ fn main {
     } else {
       x = x * 3 + 1;
     }
+    count += 1;
   }
 }

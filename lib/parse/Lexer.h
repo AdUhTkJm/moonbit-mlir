@@ -15,7 +15,7 @@ public:
     // operators
     Eq, Ne, Le, Ge, Lt, Gt,
     Plus, Minus, Mul, Div, Mod,
-    PlusEq, MinusEq, MulEq, DivEq,
+    PlusEq, MinusEq, MulEq, DivEq, ModEq,
     BitAnd, BitOr, Xor,
     BitAndEq, BitOrEq, XorEq,
     And, Or,

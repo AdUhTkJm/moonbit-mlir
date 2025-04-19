@@ -183,6 +183,9 @@ Token Tokenizer::nextToken() {
         }
       }
       break;
+    case '%': 
+      if (input[loc + 1] == '=') { loc += 2; return Token(Token::ModEq, curr_loc, 2); }
+      break;
     case '&': 
       if (input[loc + 1] == '=') { loc += 2; return Token(Token::BitAndEq, curr_loc, 2); }
       if (input[loc + 1] == '&') { loc += 2; return Token(Token::And, curr_loc, 2); }
@@ -277,6 +280,7 @@ const char *mbt::stringifyToken(Token::Type t) {
     { Token::Minus, "'-'" },
     { Token::MinusEq, "'-='" },
     { Token::Mod, "'%'" },
+    { Token::ModEq,  "'%='" },
     { Token::Mul, "'*'" },
     { Token::MulEq, "'*='" },
     { Token::Ne, "'!='" },
