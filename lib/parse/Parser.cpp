@@ -143,13 +143,47 @@ ASTNode *Parser::ifExpr() {
   return callExpr();
 }
 
-ASTNode *Parser::compareExpr() {
+ASTNode *Parser::mulExpr() {
   Location begin = peek().begin;
   auto x = ifExpr();
+  while (peek(Token::Mul) || peek(Token::Div) || peek(Token::Mod)) {
+    auto ty = consume().ty;
+    BinaryNode::Type op;
+    switch (ty) {
+    case Token::Mul:
+      op = BinaryNode::Mul; break;
+    case Token::Div:
+      op = BinaryNode::Div; break;
+    case Token::Mod:
+      op = BinaryNode::Mod; break;
+    default:
+      assert(false);
+    }
+    auto next = ifExpr();
+    x = new BinaryNode(op, x, next, begin, last().end);
+  }
+  return x;
+}
+
+ASTNode *Parser::addExpr() {
+  Location begin = peek().begin;
+  auto x = mulExpr();
+  while (peek(Token::Plus) || peek(Token::Minus)) {
+    auto ty = consume().ty;
+    auto op = ty == Token::Plus ? BinaryNode::Add : BinaryNode::Sub;
+    auto nextmul = mulExpr();
+    x = new BinaryNode(op, x, nextmul, begin, last().end);
+  }
+  return x;
+}
+
+ASTNode *Parser::compareExpr() {
+  Location begin = peek().begin;
+  auto x = addExpr();
   if (peek(Token::Le) || peek(Token::Ge) || peek(Token::Gt)
    || peek(Token::Lt) || peek(Token::Ne) || peek(Token::Eq)) {
     auto ty = consume().ty;
-    auto next = ifExpr();
+    auto next = addExpr();
     switch (ty) {
     case Token::Lt:
       x = new BinaryNode(BinaryNode::Lt, x, next, begin, last().end); break;
@@ -171,42 +205,8 @@ ASTNode *Parser::compareExpr() {
   return x;
 }
 
-ASTNode *Parser::mulExpr() {
-  Location begin = peek().begin;
-  auto x = compareExpr();
-  while (peek(Token::Mul) || peek(Token::Div) || peek(Token::Mod)) {
-    auto ty = consume().ty;
-    BinaryNode::Type op;
-    switch (ty) {
-    case Token::Mul:
-      op = BinaryNode::Mul; break;
-    case Token::Div:
-      op = BinaryNode::Div; break;
-    case Token::Mod:
-      op = BinaryNode::Mod; break;
-    default:
-      assert(false);
-    }
-    auto next = compareExpr();
-    x = new BinaryNode(op, x, next, begin, last().end);
-  }
-  return x;
-}
-
-ASTNode *Parser::addExpr() {
-  Location begin = peek().begin;
-  auto x = mulExpr();
-  while (peek(Token::Plus) || peek(Token::Minus)) {
-    auto ty = consume().ty;
-    auto op = ty == Token::Plus ? BinaryNode::Add : BinaryNode::Sub;
-    auto nextmul = mulExpr();
-    x = new BinaryNode(op, x, nextmul, begin, last().end);
-  }
-  return x;
-}
-
 ASTNode *Parser::expr() {
-  return addExpr();
+  return compareExpr();
 }
 
 ASTNode *Parser::blockStmt() {
@@ -275,6 +275,15 @@ ASTNode *Parser::stmt() {
     auto decl = new VarDeclNode(name, init, mut, begin, last().end);
     decl->type = ty;
     return decl;
+  }
+
+  if (test(Token::While)) {
+    Location begin = last().begin;
+
+    // while Expr BlockStmt ;?
+    auto cond = expr();
+    auto body = blockStmt();
+    return new WhileNode(cond, body, begin, last().end);
   }
 
   if (peek(Token::LBrace))

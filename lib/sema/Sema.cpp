@@ -223,6 +223,7 @@ Type *TypeInferrer::inferCall(FnCallNode *call) {
     
     bool success = unify(type, expected);
     assert(success);
+    delete expected;
     return call->type = retTy;
   }
 
@@ -234,6 +235,19 @@ Type *TypeInferrer::inferCall(FnCallNode *call) {
           argTy->toString(), fnTy->paramTy[i]->toString()));
   }
   return call->type = fnTy->retTy;
+}
+
+Type *TypeInferrer::inferWhile(WhileNode *whileLoop) {
+  Type *boolTy = new BoolType();
+  Type *condTy = infer(whileLoop->cond);
+  if (!unify(boolTy, condTy)) {
+    Diagnostics::error(whileLoop->cond->begin, whileLoop->cond->end,
+      std::format("while-loop condition is of type {}, but bool expected", condTy->toString()));
+  }
+  delete boolTy;
+
+  infer(whileLoop->body);
+  return whileLoop->type = new UnitType();
 }
 
 Type *TypeInferrer::infer(ASTNode *node) {
@@ -266,6 +280,9 @@ Type *TypeInferrer::infer(ASTNode *node) {
 
   if (auto ifexpr = dyn_cast<IfNode>(node))
     return inferIf(ifexpr);
+
+  if (auto whileLoop = dyn_cast<WhileNode>(node))
+    return inferWhile(whileLoop);
 
   // We might be able to infer type based on intrinsic name in future.
   if (isa<IntrinsicNode>(node))

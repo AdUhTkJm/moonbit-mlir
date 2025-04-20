@@ -1,4 +1,5 @@
 #include "MoonPasses.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
@@ -9,7 +10,12 @@
 using namespace mbt;
 using namespace mlir;
 
-void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule) {
+void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule, bool dump) {
+  // If we want to print out IR after each pass,
+  // multithreading would cause unreadable interleaves.
+  if (dump)
+    ctx->disableMultithreading();
+
   PassManager pm(ctx);
 
   pm.addPass(mbt::createRemoveUnitPass());
@@ -32,6 +38,15 @@ void mbt::registerMoonPasses(MLIRContext *ctx, ModuleOp theModule) {
   pm.addPass(mlir::createArithToLLVMConversionPass());
 
   pm.enableVerifier();
+
+  if (dump) {
+    pm.enableIRPrinting(
+        [](mlir::Pass*, mlir::Operation*) { return false; },
+        [](mlir::Pass*, mlir::Operation*) { return true; },
+        /*printModuleScope=*/true,
+        /*printAfterOnlyOnChange=*/false
+    );
+  }
   
   if (pm.run(theModule).failed())
     llvm_unreachable("pass failure");

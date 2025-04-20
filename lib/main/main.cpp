@@ -63,9 +63,7 @@ int main(int argc, char **argv) {
   mlir::ModuleOp theModule = cgm.emitModule(node);
   cgm.dump();
 
-  registerMoonPasses(&ctx, theModule);
-  llvm::errs() << "------- Transformed -------\n";
-  theModule.dump();
+  registerMoonPasses(&ctx, theModule, /*dump=*/false);
 
   llvm::LLVMContext llvmCtx;
   auto llvmModule = mbt::translateToLLVM(llvmCtx, theModule);

@@ -241,6 +241,17 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
+class WhileNode : public ASTNodeImpl<WhileNode, 15> {
+public:
+  ASTNode *cond, *body;
+  
+  WhileNode(ASTNode *cond, ASTNode *body, Location begin, Location end):
+    ASTNodeImpl(begin, end), cond(cond), body(body) {}
+
+  std::string toString() const override;
+  bool walk(ASTWalkerWithDepth, int) override;
+};
+
 template<class T>
 bool isa(ASTNode *node) {
   assert(node);

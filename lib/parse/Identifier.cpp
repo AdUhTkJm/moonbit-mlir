@@ -12,7 +12,7 @@ std::string mbt::Identifier::mangleImpl() const {
     return "main";
 
   std::string packageStr = package.size() ? std::format("{}{}", package.size(), package) : "";
-  std::string recordStr = record.size() ? std::format("{}{}", record.size(), record) : "";
+  std::string recordStr = record.size() ? std::format("{}{}N", record.size(), record) : "";
 
   // Note: arguments are not included.
   // Support overloading in future.

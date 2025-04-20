@@ -7,7 +7,7 @@
 
 namespace mbt {
 
-void registerMoonPasses(mlir::MLIRContext *ctx, mlir::ModuleOp theModule);
+void registerMoonPasses(mlir::MLIRContext *ctx, mlir::ModuleOp theModule, bool dump);
 
 // Removes all instances of values of mir::UnitType.
 std::unique_ptr<mlir::Pass> createRemoveUnitPass();

@@ -1,6 +1,7 @@
 #include "MoonPasses.h"
 #include "lib/dialect/MoonOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -21,6 +22,8 @@ REMOVE_UNIT_REWRITER(Func, func::FuncOp);
 REMOVE_UNIT_REWRITER(CallIndirect, func::CallIndirectOp);
 REMOVE_UNIT_REWRITER(FPtr, mir::ClosureOp);
 REMOVE_UNIT_REWRITER(GetUnit, mir::GetUnitOp);
+REMOVE_UNIT_REWRITER(ScfYield, scf::YieldOp);
+REMOVE_UNIT_REWRITER(ScfIf, scf::IfOp);
 
 // ------------------------------------------------------------
 // Unit Consumers
@@ -31,6 +34,14 @@ LogicalResult RemoveUnitReturn::matchAndRewrite(func::ReturnOp op, PatternRewrit
     return failure();
 
   rewriter.replaceOpWithNewOp<func::ReturnOp>(op /*create an empty return op*/);
+  return success();
+}
+
+LogicalResult RemoveUnitScfYield::matchAndRewrite(scf::YieldOp op, PatternRewriter &rewriter) const {
+  if (op.getNumOperands() < 1 || !isa<mir::UnitType>(op.getOperand(0).getType()))
+    return failure();
+
+  rewriter.replaceOpWithNewOp<scf::YieldOp>(op /*create an empty yield op*/);
   return success();
 }
 
@@ -112,6 +123,22 @@ LogicalResult RemoveUnitGetUnit::matchAndRewrite(mir::GetUnitOp op, PatternRewri
   return success();
 }
 
+LogicalResult RemoveUnitScfIf::matchAndRewrite(scf::IfOp op, PatternRewriter &rewriter) const {
+  if (op->getNumResults() < 1 || !isa<mir::UnitType>(op.getResult(0).getType()))
+    return failure();
+
+  bool withElse = !op.getElseRegion().empty();
+  auto emptyIf = rewriter.create<scf::IfOp>(op.getLoc(), /*cond=*/op.getCondition(), withElse);
+  
+  // Move all blocks in both regions into the new IfOp.
+  rewriter.inlineRegionBefore(op.getThenRegion(), emptyIf.getThenRegion(), emptyIf.getThenRegion().begin());
+  if (withElse)
+    rewriter.inlineRegionBefore(op.getElseRegion(), emptyIf.getElseRegion(), emptyIf.getElseRegion().begin());
+  
+  op.erase();
+  return success();
+}
+
 class RemoveUnitPass : public PassWrapper<RemoveUnitPass, OperationPass<ModuleOp>> {
 public:
   void runOnOperation() override;
@@ -128,7 +155,8 @@ void RemoveUnitPass::runOnOperation() {
   unitConsumers.add<
     RemoveUnitFunc,
     RemoveUnitFPtr,
-    RemoveUnitReturn
+    RemoveUnitReturn,
+    RemoveUnitScfYield
   >(ctx);
 
   (void) mlir::applyPatternsGreedily(theModule, std::move(unitConsumers));
@@ -138,7 +166,8 @@ void RemoveUnitPass::runOnOperation() {
   unitProducers.add<
     RemoveUnitIntrinsic,
     RemoveUnitCallIndirect,
-    RemoveUnitGetUnit
+    RemoveUnitGetUnit,
+    RemoveUnitScfIf
   >(ctx);
 
   (void) mlir::applyPatternsGreedily(theModule, std::move(unitProducers));

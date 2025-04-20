@@ -167,6 +167,14 @@ bool AssignNode::walk(ASTWalkerWithDepth walker, int depth) {
   return walker(this, depth) && lhs->walk(walker, depth + 1) && rhs->walk(walker, depth + 1);
 }
 
+std::string WhileNode::toString() const {
+  return "While";
+}
+
+bool WhileNode::walk(ASTWalkerWithDepth walker, int depth) {
+  return walker(this, depth) && cond->walk(walker, depth + 1) && body->walk(walker, depth + 1);
+}
+
 void ASTNode::dump() {
   walk([&](ASTNode *node, int depth) {
     std::cerr << std::string(depth * 2, ' ') << node->toString() << "\n";

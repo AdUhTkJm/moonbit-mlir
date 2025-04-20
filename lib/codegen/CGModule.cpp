@@ -250,6 +250,35 @@ mlir::Value CGModule::emitStmt(ASTNode *node) {
     symbolTable[mangledName] = { .value = value, .mut = false };
     return builder.create<mir::GetUnitOp>(loc);
   }
+  
+  if (auto whileLoop = dyn_cast<WhileNode>(node)) {
+    auto loc = getLoc(node);
+    auto whileOp = builder.create<scf::WhileOp>(loc, /*resultTypes=*/TypeRange(), /*operands=*/ValueRange());
+    
+    // See https://mlir.llvm.org/docs/Dialects/SCFDialect/#scfwhile-scfwhileop.
+    // The before region ends up with a `scf.condition`, determining whether we should proceed to `after`.
+    {
+      OpBuilder::InsertionGuard guard(builder);
+      auto &before =  whileOp.getBefore();
+      auto block = builder.createBlock(&before);
+      builder.setInsertionPointToStart(block);
+      auto value = emitExpr(whileLoop->cond);
+      builder.create<scf::ConditionOp>(loc, value, /*args=*/ValueRange());
+    }
+
+    // Now emit the body in "after" region.
+    {
+      OpBuilder::InsertionGuard guard(builder);
+      auto &after =  whileOp.getAfter();
+      auto block = builder.createBlock(&after);
+      builder.setInsertionPointToStart(block);
+      emitStmt(whileLoop->body);
+      // Don't forget the terminator of the block.
+      builder.create<scf::YieldOp>(loc);
+    }
+
+    return builder.create<mir::GetUnitOp>(loc);
+  }
 
   return emitExpr(node);
 }

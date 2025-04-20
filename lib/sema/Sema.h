@@ -27,6 +27,7 @@ class TypeInferrer {
   Type *inferBinary(BinaryNode *binary);
   Type *inferCall(FnCallNode *call);
   Type *inferAssign(AssignNode *assign);
+  Type *inferWhile(WhileNode *whileLoop);
 
   struct SemanticScope {
     decltype(typeMap) oldMap;
