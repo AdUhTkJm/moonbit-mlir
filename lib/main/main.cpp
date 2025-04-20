@@ -1,3 +1,4 @@
+#include "CLIParser.h"
 #include "lib/parse/Parser.h"
 #include "lib/utils/Diagnostics.h"
 #include "lib/codegen/CGModule.h"
@@ -5,18 +6,26 @@
 #include "lib/transforms/MoonPasses.h"
 #include "lib/transforms/LLVMLowering.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/FileSystem.h"
 #include <fstream>
 #include <sstream>
 
 using namespace mbt;
 
 int main(int argc, char **argv) {
-  if (argc < 2) {
-    std::cerr << "usage: moonc <file>\n";
+  auto options = mbt::parseCLIArgument(argc, argv);
+
+  if (options.inputFiles.size() < 1) {
+    std::cerr << "fatal error: no input files";
     return 1;
   }
 
-  std::ifstream ifs(argv[1]);
+  if (options.inputFiles.size() > 1) {
+    std::cerr << "error: moonc does not support more than 1 input files currently";
+    return 1;
+  }
+
+  std::ifstream ifs(options.inputFiles[0]);
   if (!ifs) {
     std::cerr << std::format("cannot open file: {}\n", argv[1]);
     return 1;
@@ -54,21 +63,30 @@ int main(int argc, char **argv) {
   mbt::TypeInferrer inferrer;
   inferrer.infer(node);
   inferrer.tidy(node);
-  // node->dump();
+  if (options.dumpAST)
+    node->dump();
 
   Diagnostics::reportAll();
 
   mlir::MLIRContext ctx;
   CGModule cgm(ctx);
   mlir::ModuleOp theModule = cgm.emitModule(node);
-  cgm.dump();
+  if (options.dumpIR)
+    cgm.dump();
 
-  registerMoonPasses(&ctx, theModule, /*dump=*/false);
+  registerMoonPasses(&ctx, theModule, /*dump=*/options.dumpIR);
 
   llvm::LLVMContext llvmCtx;
   auto llvmModule = mbt::translateToLLVM(llvmCtx, theModule);
-  llvm::errs() << "------- Lowered -------\n";
-  llvmModule->print(llvm::errs(), nullptr);
+  
+  if (!options.outputFile.size()) {
+    llvmModule->print(llvm::errs(), nullptr);
+    return 0;
+  }
+
+  std::error_code errorCode;
+  llvm::raw_fd_ostream dest(options.outputFile, errorCode, llvm::sys::fs::OF_None);
+  llvmModule->print(dest, nullptr);
   
   return 0;
 }

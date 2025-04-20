@@ -1,5 +1,6 @@
 set(TBLGEN_SOURCES
   Diagnostics.cpp
+  CLIParser.cpp
 )
 
 add_library(LibUtils STATIC ${TBLGEN_SOURCES})

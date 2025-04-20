@@ -2,7 +2,6 @@
 #define LEXER_H
 
 #include "lib/utils/Common.h"
-#include "lib/utils/Diagnostics.h"
 
 namespace mbt {
 

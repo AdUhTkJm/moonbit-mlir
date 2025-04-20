@@ -1,5 +1,5 @@
 #include "Lexer.h"
-#include <format>
+#include "lib/utils/Diagnostics.h"
 #include <map>
 #include <cmath>
 
