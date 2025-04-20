@@ -61,8 +61,7 @@ int main(int argc, char **argv) {
 
   // Semantic analysis.
   mbt::TypeInferrer inferrer;
-  inferrer.infer(node);
-  inferrer.tidy(node);
+  inferrer.process(node);
   if (options.dumpAST)
     node->dump();
 

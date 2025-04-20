@@ -41,16 +41,6 @@ Token Parser::last() {
   return tokens[place - 1];
 }
 
-bool Parser::peek(Token::Type ty) {
-  return peek().ty == ty;
-}
-
-bool Parser::test(Token::Type ty) {
-  if (peek(ty))
-    return ++place;
-  return false;
-}
-
 std::optional<Identifier> Parser::getIdentifier() {
   if (!peek(Token::Ident) && !peek(Token::At))
     return std::nullopt;
@@ -105,6 +95,21 @@ mbt::Type *Parser::parseType() {
   return nullptr;
 }
 
+ASTNode *Parser::structLiteralExpr() {
+  auto begin = last().begin;
+  expect(Token::LBrace);
+  std::vector<std::pair<Identifier, ASTNode*>> inits;
+  while (!test(Token::RBrace)) {
+    auto name = expectUnqualifiedIdentifier();
+    expect(Token::Colon);
+    auto init = expr();
+    inits.push_back({ name, init });
+    if (!test(Token::Comma) && !peek(Token::RBrace))
+      Diagnostics::error(peek().begin, peek().end, "expected ','");
+  }
+  return new StructLiteralNode(inits, begin, last().end);
+}
+
 ASTNode *Parser::primary() {
   Location begin = last().begin;
 
@@ -123,6 +128,11 @@ ASTNode *Parser::primary() {
     return x;
   }
 
+  // Struct literal.
+  if (peek(Token::LBrace))
+    return structLiteralExpr();
+
+  // Consume the next token to prevent infinite loop.
   consume();
   Diagnostics::error(peek().begin, peek().end,
     std::format("unexpected token: {}", stringifyToken(peek())));
@@ -166,9 +176,9 @@ ASTNode *Parser::ifExpr() {
   if (test(Token::If)) {
     Location begin = last().begin;
     ASTNode *cond = expr();
-    ASTNode *ifso = blockStmt();
+    ASTNode *ifso = blockExpr();
     if (test(Token::Else)) {
-      ASTNode *ifnot = blockStmt();
+      ASTNode *ifnot = blockExpr();
       return new IfNode(cond, ifso, ifnot, begin, last().end);
     }
     return new IfNode(cond, ifso, begin, last().end);
@@ -180,7 +190,7 @@ ASTNode *Parser::ifExpr() {
 ASTNode *Parser::mulExpr() {
   Location begin = peek().begin;
   auto x = ifExpr();
-  while (peek(Token::Mul) || peek(Token::Div) || peek(Token::Mod)) {
+  while (peek(Token::Mul, Token::Div, Token::Mod)) {
     auto ty = consume().ty;
     BinaryNode::Type op;
     switch (ty) {
@@ -202,7 +212,7 @@ ASTNode *Parser::mulExpr() {
 ASTNode *Parser::addExpr() {
   Location begin = peek().begin;
   auto x = mulExpr();
-  while (peek(Token::Plus) || peek(Token::Minus)) {
+  while (peek(Token::Plus, Token::Minus)) {
     auto ty = consume().ty;
     auto op = ty == Token::Plus ? BinaryNode::Add : BinaryNode::Sub;
     auto nextmul = mulExpr();
@@ -214,8 +224,7 @@ ASTNode *Parser::addExpr() {
 ASTNode *Parser::compareExpr() {
   Location begin = peek().begin;
   auto x = addExpr();
-  if (peek(Token::Le) || peek(Token::Ge) || peek(Token::Gt)
-   || peek(Token::Lt) || peek(Token::Ne) || peek(Token::Eq)) {
+  if (peek(Token::Le, Token::Ge, Token::Gt, Token::Lt, Token::Ne, Token::Eq)) {
     auto ty = consume().ty;
     auto next = addExpr();
     switch (ty) {
@@ -240,10 +249,20 @@ ASTNode *Parser::compareExpr() {
 }
 
 ASTNode *Parser::expr() {
+  if (peek(Token::LBrace)) {
+    // Case 1. Struct literals:
+    //   { x : ... 
+    if (lookahead(Token::LBrace, Token::Ident, Token::Colon))
+      return structLiteralExpr();
+
+    // Case 2: A simple block
+    return blockExpr();
+  }
+
   return compareExpr();
 }
 
-ASTNode *Parser::blockStmt() {
+ASTNode *Parser::blockExpr() {
   expect(Token::LBrace);
   auto block = new BlockNode(last().begin, {});
   while (!test(Token::RBrace) && !test(Token::End))
@@ -314,19 +333,14 @@ ASTNode *Parser::stmt() {
   if (test(Token::While)) {
     Location begin = last().begin;
 
-    // while Expr BlockStmt ;?
+    // while Expr blockExpr ;?
     auto cond = expr();
-    auto body = blockStmt();
+    auto body = blockExpr();
     return new WhileNode(cond, body, begin, last().end);
   }
 
-  if (peek(Token::LBrace))
-    return blockStmt();
-
   auto x = expr();
-  if (test(Token::Assign)
-   || test(Token::PlusEq) || test(Token::MinusEq) || test(Token::MulEq) || test(Token::DivEq)
-   || test(Token::ModEq))
+  if (test(Token::Assign, Token::PlusEq, Token::MinusEq, Token::MulEq, Token::DivEq, Token::ModEq))
     return assignStmt(x);
 
   // Optional semicolon.
@@ -379,7 +393,7 @@ ASTNode *Parser::topFn() {
     auto builtin = expect(Token::StrLit).vs;
     body = new IntrinsicNode(builtin, last().begin, last().end);
   } else {
-    body = blockStmt();
+    body = blockExpr();
   }
 
   // Optional ';'

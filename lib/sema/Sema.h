@@ -4,12 +4,18 @@
 #include "lib/parse/ASTNode.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "TypeContext.h"
 
 namespace mbt {
 
 class TypeInferrer {
+  TypeContext ctx;
+
   llvm::StringMap<Type*> typeMap;
   llvm::StringSet<> mutables;
+  llvm::StringMap<Type*> structs;
+  std::map<std::vector<std::string>, Type*> structFields;
+
   int id = 0;
 
   // Create a brand-new WeakType instance.
@@ -37,9 +43,11 @@ class TypeInferrer {
     ~SemanticScope();
   };
 
-public:  
   // This also updates the `type` field in ASTNode.
   Type *infer(ASTNode *node);
+
+public:
+  void process(ASTNode *node);
 
   // Tidies up all weak types, making them referring to the concrete type.
   void tidy(ASTNode *node);

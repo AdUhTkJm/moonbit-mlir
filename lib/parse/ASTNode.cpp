@@ -146,11 +146,11 @@ bool MemAccessNode::walk(ASTWalkerWithDepth walker, int depth) {
   return walker(this, depth) && record->walk(walker, depth + 1);
 }
 
-std::string InitializerNode::toString() const {
+std::string StructLiteralNode::toString() const {
   return std::format("Initializer : {}", typeString());
 }
 
-bool InitializerNode::walk(ASTWalkerWithDepth walker, int depth) {
+bool StructLiteralNode::walk(ASTWalkerWithDepth walker, int depth) {
   walker(this, depth);
   for (auto [_, node] : inits)
     if (!node->walk(walker, depth + 1))

@@ -13,7 +13,7 @@ TypeInferrer::SemanticScope::~SemanticScope() {
 }
 
 Type *TypeInferrer::fresh() {
-  return new WeakType(id++);
+  return ctx.create<WeakType>(id++);
 }
 
 // Checks if `t1` occurs in `t2`.
@@ -112,13 +112,13 @@ Type *TypeInferrer::inferFn(FnDeclNode *fn) {
         std::format("return type {} does not match expression type {}",
           fnTy->retTy->toString(), retTy->toString()));
       
-      return new UnitType();
+      return ctx.create<UnitType>();
     }
   }
 
-  fn->type = new FunctionType(paramsTy, retTy);
+  fn->type = ctx.create<FunctionType>(paramsTy, retTy);
   typeMap[fn->name.mangle()] = fn->type;
-  return new UnitType();
+  return ctx.create<UnitType>();
 }
 
 Type *TypeInferrer::inferIf(IfNode *ifexpr) {
@@ -131,7 +131,7 @@ Type *TypeInferrer::inferIf(IfNode *ifexpr) {
       Diagnostics::error(ifexpr->ifso->begin, ifexpr->ifso->end,
         "if-statement without an else branch must return unit");
     }
-    return ifexpr->type = new UnitType();
+    return ifexpr->type = ctx.create<UnitType>();
   }
 
   Type *ifsoTy = infer(ifexpr->ifso);
@@ -157,7 +157,7 @@ Type *TypeInferrer::inferBinary(BinaryNode *binary) {
   case BinaryNode::Eq:
   case BinaryNode::Ne:
     // Comparisons.
-    return binary->type = new BoolType();
+    return binary->type = ctx.create<BoolType>();
   default:
     // Arithmetic operation.
     return binary->type = lty;
@@ -176,7 +176,7 @@ Type *TypeInferrer::inferAssign(AssignNode *assign) {
       "cannot assign to immutable variable");
   }
 
-  return assign->type = new UnitType();
+  return assign->type = ctx.create<UnitType>();
 }
 
 Type *TypeInferrer::inferVarDecl(VarDeclNode *decl) {
@@ -199,11 +199,11 @@ Type *TypeInferrer::inferVarDecl(VarDeclNode *decl) {
       std::format("variable {} with type {} cannot accept this initializer (type {})",
         mangledName, decl->type->toString(), ty->toString()));
 
-    return new UnitType();
+    return ctx.create<UnitType>();
   }
   decl->type = ty;
   // Var declaration itself shouldn't have type.
-  return new UnitType();
+  return ctx.create<UnitType>();
 }
 
 Type *TypeInferrer::inferCall(FnCallNode *call) {
@@ -219,11 +219,10 @@ Type *TypeInferrer::inferCall(FnCallNode *call) {
       paramTy.push_back(infer(arg));
     
     Type *retTy = fresh();
-    Type *expected = new FunctionType(paramTy, retTy);
+    Type *expected = ctx.create<FunctionType>(paramTy, retTy);
     
     bool success = unify(type, expected);
     assert(success);
-    delete expected;
     return call->type = retTy;
   }
 
@@ -238,16 +237,15 @@ Type *TypeInferrer::inferCall(FnCallNode *call) {
 }
 
 Type *TypeInferrer::inferWhile(WhileNode *whileLoop) {
-  Type *boolTy = new BoolType();
+  Type *boolTy = ctx.create<BoolType>();
   Type *condTy = infer(whileLoop->cond);
   if (!unify(boolTy, condTy)) {
     Diagnostics::error(whileLoop->cond->begin, whileLoop->cond->end,
       std::format("while-loop condition is of type {}, but bool expected", condTy->toString()));
   }
-  delete boolTy;
 
   infer(whileLoop->body);
-  return whileLoop->type = new UnitType();
+  return whileLoop->type = ctx.create<UnitType>();
 }
 
 Type *TypeInferrer::infer(ASTNode *node) {
@@ -270,7 +268,7 @@ Type *TypeInferrer::infer(ASTNode *node) {
     return inferAssign(assign);
 
   if (auto intLit = dyn_cast<IntLiteralNode>(node))
-    return intLit->type = new IntType();
+    return intLit->type = ctx.create<IntType>();
 
   if (auto fn = dyn_cast<FnDeclNode>(node))
     return inferFn(fn);
@@ -297,12 +295,37 @@ Type *TypeInferrer::infer(ASTNode *node) {
     
     // For empty block.
     if (!lastType)
-      return node->type = new UnitType();
+      return node->type = ctx.create<UnitType>();
 
     return node->type = lastType;
   }
 
   assert(false);
+}
+
+void TypeInferrer::process(ASTNode *node) {
+  assert(node);
+
+  node->walk([&](ASTNode *x) {
+    if (auto record = dyn_cast<StructDeclNode>(x)) {
+      std::vector<Type*> types;
+      std::vector<std::string> fields;
+      types.reserve(record->fields.size());
+      auto recordName = record->name.mangle();
+      for (auto [name, type] : record->fields)
+        types.push_back(type),
+        fields.push_back(name);
+      
+      auto structTy = ctx.create<StructType>(recordName, types);
+      structs[recordName] = structTy;
+      structFields[fields] = structTy;
+    }
+
+    return true;
+  });
+
+  infer(node);
+  tidy(node);
 }
 
 void TypeInferrer::tidy(ASTNode *node) {

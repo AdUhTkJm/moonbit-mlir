@@ -55,7 +55,7 @@ public:
   virtual bool walk(ASTWalkerWithDepth, int) override = 0;
 };
 
-class BinaryNode : public ASTNodeImpl<BinaryNode, 1> {
+class BinaryNode : public ASTNodeImpl<BinaryNode, __LINE__> {
 public:
   enum Type {
     Add, Sub, Mul, Div, Mod, And, Or, Xor,
@@ -69,7 +69,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class UnaryNode : public ASTNodeImpl<UnaryNode, 2> {
+class UnaryNode : public ASTNodeImpl<UnaryNode, __LINE__> {
 public:
   enum Type {
     Plus, Minus
@@ -83,7 +83,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class VarDeclNode : public ASTNodeImpl<VarDeclNode, 3> {
+class VarDeclNode : public ASTNodeImpl<VarDeclNode, __LINE__> {
 public:
   Identifier name;
   ASTNode *init;
@@ -100,9 +100,8 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class FnDeclNode : public ASTNodeImpl<FnDeclNode, 4> {
+class FnDeclNode : public ASTNodeImpl<FnDeclNode, __LINE__> {
 public:
-  constexpr static int nodeType = 4;
   Identifier name;
   // For a method, this is the name of the struct to which this `fn` belongs.
   std::optional<std::string> belongsTo;
@@ -121,9 +120,8 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class IntLiteralNode : public ASTNodeImpl<IntLiteralNode, 5> {
+class IntLiteralNode : public ASTNodeImpl<IntLiteralNode, __LINE__> {
 public:
-  constexpr static int nodeType = 5;
   int value;
 
   IntLiteralNode(int value, Location begin, Location end):
@@ -133,7 +131,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class BlockNode : public ASTNodeImpl<BlockNode, 6> {
+class BlockNode : public ASTNodeImpl<BlockNode, __LINE__> {
 public:
   std::vector<ASTNode*> body;
 
@@ -143,7 +141,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class VarNode : public ASTNodeImpl<VarNode, 7> {
+class VarNode : public ASTNodeImpl<VarNode, __LINE__> {
 public:
   Identifier name;
 
@@ -154,7 +152,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class IfNode : public ASTNodeImpl<IfNode, 8> {
+class IfNode : public ASTNodeImpl<IfNode, __LINE__> {
 public:
   ASTNode *cond;
   ASTNode *ifso;
@@ -170,7 +168,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, 9> {
+class IntrinsicNode : public ASTNodeImpl<IntrinsicNode, __LINE__> {
 public:
   std::string intrinsic;
   
@@ -181,7 +179,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class FnCallNode : public ASTNodeImpl<FnCallNode, 10> {
+class FnCallNode : public ASTNodeImpl<FnCallNode, __LINE__> {
 public:
   ASTNode *func;
   std::vector<ASTNode*> args;
@@ -193,7 +191,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class StructDeclNode : public ASTNodeImpl<StructDeclNode, 11> {
+class StructDeclNode : public ASTNodeImpl<StructDeclNode, __LINE__> {
 public:
   Identifier name;
   std::vector<std::pair<std::string, Type*>> fields;
@@ -205,7 +203,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class MemAccessNode : public ASTNodeImpl<MemAccessNode, 12> {
+class MemAccessNode : public ASTNodeImpl<MemAccessNode, __LINE__> {
 public:
   ASTNode *record;
   Identifier memName;
@@ -218,18 +216,18 @@ public:
 };
 
 // For struct initializers; i.e. things like { x : 0, y : 0 }
-class InitializerNode : public ASTNodeImpl<InitializerNode, 13> {
+class StructLiteralNode : public ASTNodeImpl<StructLiteralNode, __LINE__> {
 public:
   std::vector<std::pair<Identifier, ASTNode*>> inits;
   
-  InitializerNode(const decltype(inits) &inits, Location begin, Location end):
+  StructLiteralNode(const decltype(inits) &inits, Location begin, Location end):
     ASTNodeImpl(begin, end), inits(inits) {}
 
   std::string toString() const override;
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class AssignNode : public ASTNodeImpl<AssignNode, 14> {
+class AssignNode : public ASTNodeImpl<AssignNode, __LINE__> {
 public:
   VarNode *lhs;
   ASTNode *rhs;
@@ -241,7 +239,7 @@ public:
   bool walk(ASTWalkerWithDepth, int) override;
 };
 
-class WhileNode : public ASTNodeImpl<WhileNode, 15> {
+class WhileNode : public ASTNodeImpl<WhileNode, __LINE__> {
 public:
   ASTNode *cond, *body;
   

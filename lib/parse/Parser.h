@@ -18,8 +18,40 @@ class Parser {
   Token expect(Token::Type ty);
   Token peek();
   Token last();
-  bool peek(Token::Type ty);
-  bool test(Token::Type ty);
+
+  // Returns true if the current token is one of the `tys`.
+  template<class... T>
+  requires (... && std::is_same_v<T, Token::Type>)
+  bool peek(T... tys) {
+    auto peeked = peek().ty;
+    return ((peeked == tys) || ...);
+  }
+
+  // Returns true if the current token is one of the `tys`, and consumes the token.
+  template<class... T>
+  requires (... && std::is_same_v<T, Token::Type>)
+  bool test(T... tys) {
+    if (peek(tys...)) {
+      consume();
+      return true;
+    }
+    return false;
+  }
+
+  // Lookahead from current position (inclusive).
+  template<class... T>
+  requires (... && std::is_same_v<T, Token::Type>)
+  bool lookahead(T... tys) {
+    constexpr size_t count = sizeof...(T);
+    if (place + count > tokens.size()) return false;
+
+    Token::Type expected[] = { tys... };
+    for (size_t i = 0; i < count; ++i) {
+      if (tokens[place + i].ty != expected[i])
+        return false;
+    }
+    return true;
+  }
 
   // Parse the next identifier.
   std::optional<Identifier> getIdentifier();
@@ -33,13 +65,14 @@ class Parser {
   ASTNode *compareExpr();
   ASTNode *mulExpr();
   ASTNode *addExpr();
+  ASTNode *blockExpr(); // Note that every block can return some value.
   ASTNode *expr();
-  ASTNode *blockStmt();
   ASTNode *stmt();
   ASTNode *toplevel();
   ASTNode *topFn();
   ASTNode *topStruct();
 
+  ASTNode *structLiteralExpr();
   ASTNode *assignStmt(ASTNode *lhs);
 
   mbt::Type *parseType();

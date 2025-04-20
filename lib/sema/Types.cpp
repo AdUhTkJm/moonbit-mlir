@@ -1,4 +1,5 @@
 #include "Types.h"
+#include "llvm/ADT/STLExtras.h"
 #include <sstream>
 
 using namespace mbt;
@@ -74,4 +75,36 @@ bool Type::isWeak() {
     weak |= isa<WeakType>(ty);
   });
   return weak;
+}
+
+bool mbt::operator==(const Type &a, const Type &b) {
+  if (a.kind != b.kind)
+    return false;
+
+  if (auto weakA = dyn_cast<WeakType>(&a)) {
+    auto weakB = dyn_cast<WeakType>(&b);
+    return weakA->id == weakB->id;
+  }
+
+  if (auto fnA = dyn_cast<FunctionType>(&a)) {
+    auto fnB = dyn_cast<FunctionType>(&b);
+    if (*fnA->retTy != *fnB->retTy)
+      return false;
+
+    if (fnA->paramTy.size() != fnB->paramTy.size())
+      return false;
+
+    for (auto [i, x] : llvm::enumerate(fnA->paramTy))
+      if (*fnA->paramTy[i] != *fnB->paramTy[i])
+        return false;
+
+    return true;
+  }
+
+  if (auto sA = dyn_cast<StructType>(&a)) {
+    auto sB = dyn_cast<StructType>(&b);
+    return sA->name == sB->name;
+  }
+
+  return true;
 }
