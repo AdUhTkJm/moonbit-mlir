@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include "lib/parse/Identifier.h"
 #include "lib/utils/Common.h"
 #include <functional>
 
@@ -97,10 +98,10 @@ public:
 // and Sema will resolve them.
 class UnresolvedType : public TypeImpl<UnresolvedType, 6> {
 public:
-  std::string name;
+  Identifier name;
   std::vector<std::string> typeArgs;
   UnresolvedType() { }
-  UnresolvedType(std::string name, const std::vector<std::string> typeArgs = {}):
+  UnresolvedType(Identifier name, const std::vector<std::string> typeArgs = {}):
     name(name), typeArgs(typeArgs) {}
 
   std::string toString() const override { return "<unresolved>"; }

@@ -89,11 +89,11 @@ public:
   ASTNode *init;
   bool mut;
 
-  VarDeclNode(llvm::StringRef name, ASTNode *init, bool mut, Location begin, Location end):
+  VarDeclNode(Identifier name, ASTNode *init, bool mut, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), init(init), mut(mut) {}
 
   // Immutable variables as default.
-  VarDeclNode(llvm::StringRef name, ASTNode *init, Location begin, Location end):
+  VarDeclNode(Identifier name, ASTNode *init, Location begin, Location end):
     ASTNodeImpl(begin, end), name(name), init(init), mut(false) {}
 
   std::string toString() const override;

@@ -1,9 +1,11 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "Identifier.h"
 #include "lib/utils/Common.h"
 #include "Lexer.h"
 #include "ASTNode.h"
+#include <optional>
 
 namespace mbt {
 
@@ -19,6 +21,11 @@ class Parser {
   Token last();
   bool peek(Token::Type ty);
   bool test(Token::Type ty);
+
+  // Parse the next identifier.
+  std::optional<Identifier> getIdentifier();
+  Identifier expectIdentifier();
+  Identifier expectUnqualifiedIdentifier();
 
   ASTNode *primary();
   ASTNode *memAccessExpr();

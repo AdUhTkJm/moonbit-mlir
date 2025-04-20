@@ -228,6 +228,7 @@ Token Tokenizer::nextToken() {
   case '{': loc++; return Token(Token::LBrace, curr_loc, 1);
   case '}': loc++; return Token(Token::RBrace, curr_loc, 1);
   case '.': loc++; return Token(Token::Dot, curr_loc, 1);
+  case '@': loc++; return Token(Token::At, curr_loc, 1);
   default:
     Diagnostics::error(curr_loc, curr_loc, std::format("unexpected character: {}", c));
     loc++; return nextToken();
@@ -247,6 +248,7 @@ const char *mbt::stringifyToken(Token::Type t) {
     { Token::And, "'&&'" },
     { Token::Arrow, "'->'" },
     { Token::Assign, "'='" },
+    { Token::At, "'@'" },
     { Token::BitAnd, "'&'" },
     { Token::BitAndEq, "'&='" },
     { Token::BitOr, "'|'" },

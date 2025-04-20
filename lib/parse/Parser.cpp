@@ -1,6 +1,9 @@
 #include "Parser.h"
 #include "ASTNode.h"
+#include "Identifier.h"
 #include "lib/utils/Diagnostics.h"
+#include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace mbt;
 
@@ -48,6 +51,38 @@ bool Parser::test(Token::Type ty) {
   return false;
 }
 
+std::optional<Identifier> Parser::getIdentifier() {
+  if (!peek(Token::Ident) && !peek(Token::At))
+    return std::nullopt;
+
+  return expectIdentifier();
+}
+
+Identifier Parser::expectIdentifier() {
+  std::string package;
+  // @builtin.(A::)?ident
+  if (test(Token::At)) {
+    package = expect(Token::Ident).vs;
+    expect(Token::Dot);
+  }
+
+  auto ident1 = expect(Token::Ident).vs;
+  std::string ident2;
+  if (test(Token::ColonColon))
+    ident2 = expect(Token::Ident).vs;
+  
+  // (@builtin.)?ident
+  if (!ident2.size())
+    return Identifier(package, /*record=*/"", ident1);
+
+  // (@builtin.)?A::ident
+  return Identifier(package, ident1, ident2);
+}
+
+Identifier Parser::expectUnqualifiedIdentifier() {
+  return expect(Token::Ident).vs;
+}
+
 mbt::Type *Parser::parseType() {
   if (test(Token::Int))
     return new IntType();
@@ -61,8 +96,8 @@ mbt::Type *Parser::parseType() {
   if (test(Token::String))
     return new StringType();
 
-  if (test(Token::Ident))
-    return new UnresolvedType(last().vs);
+  if (auto ident = getIdentifier())
+    return new UnresolvedType(*ident);
   
   consume();
   Diagnostics::error(peek().begin, peek().end,
@@ -71,16 +106,15 @@ mbt::Type *Parser::parseType() {
 }
 
 ASTNode *Parser::primary() {
+  Location begin = last().begin;
+
   if (peek(Token::IntLit)) {
     auto tok = consume();
     return new IntLiteralNode(tok.vi, tok.begin, tok.end);
   }
   
-  if (test(Token::Ident)) {
-    Location begin = last().begin;
-    auto ident = last().vs;
-    return new VarNode(ident, begin, last().end);
-  }
+  if (auto ident = getIdentifier())
+    return new VarNode(*ident, begin, last().end);
 
   if (test(Token::LPar)) {
     // TODO: tuples, unit literal
@@ -100,7 +134,7 @@ ASTNode *Parser::memAccessExpr() {
   auto x = primary();
 
   while (test(Token::Dot)) {
-    auto ident = expect(Token::Ident).vs;
+    auto ident = expectUnqualifiedIdentifier();
     x = new MemAccessNode(x, ident, begin, last().end);
   }
 
@@ -256,10 +290,10 @@ ASTNode *Parser::stmt() {
     bool mut = test(Token::Mut);
     
     // let (mut)? x (: Type)? = Expr;
-    auto name = expect(Token::Ident).vs;
+    auto name = expectIdentifier();
 
     // if there's no name, `expect` would have reported an error
-    if (name.length() != 0 && isupper(name[0]))
+    if (name.getName().size() && isupper(name.getName()[0]))
       Diagnostics::error(last().begin, last().end,
         "variable must start with a lower-case letter");
 
@@ -302,17 +336,8 @@ ASTNode *Parser::stmt() {
 
 ASTNode *Parser::topFn() {
   Location begin = last().begin; // 'fn'
-  auto ident = expect(Token::Ident).vs;
-  std::string name;
-  std::optional<std::string> belongsTo;
-
-  // `ident` is actually the name of a struct.
-  if (test(Token::ColonColon)) {
-    belongsTo = ident;
-    name = expect(Token::Ident).vs;
-  } else {
-    name = ident;
-  }
+  auto ident = expectIdentifier();
+  llvm::StringRef name = ident.getName();
 
   std::vector<VarDeclNode*> params;
   std::vector<Type*> paramTy;
@@ -323,7 +348,7 @@ ASTNode *Parser::topFn() {
     expect(Token::LPar);
     while (!test(Token::RPar)) {
       auto begin = peek().begin;
-      auto paramName = expect(Token::Ident).vs;
+      auto paramName = expectUnqualifiedIdentifier();
       // Type annotation is required.
       expect(Token::Colon);
       Type *ty = parseType();
@@ -360,24 +385,22 @@ ASTNode *Parser::topFn() {
   // Optional ';'
   test(Token::Semicolon);
 
-  auto fn = belongsTo
-    ? new FnDeclNode(*belongsTo, name, params, body, begin, body->end)
-    : new FnDeclNode(name, params, body, begin, body->end);
+  auto fn = new FnDeclNode(name, params, body, begin, body->end);
   fn->type = fnTy;
   return fn;
 }
 
 ASTNode *Parser::topStruct() {
   Location begin = last().begin; // 'struct'
-  auto name = expect(Token::Ident).vs;
+  auto name = expectUnqualifiedIdentifier();
   expect(Token::LBrace);
 
   std::vector<std::pair<std::string, Type*>> fields;
   while (!test(Token::RBrace)) {
-    auto field = expect(Token::Ident).vs;
+    auto field = expectUnqualifiedIdentifier().getName();
     expect(Token::Colon);
     Type *ty = parseType();
-    fields.push_back(std::make_pair(field, ty));
+    fields.push_back(std::make_pair(std::string(field), ty));
   }
 
   // Optional ';'

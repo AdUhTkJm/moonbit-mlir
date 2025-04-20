@@ -22,10 +22,14 @@ class Identifier {
   std::string mangleImpl() const;
 public:
   Identifier() {}
-  Identifier(llvm::StringRef str);
-  Identifier(std::string str);
+  Identifier(llvm::StringRef name);
+  Identifier(std::string name);
+  Identifier(llvm::StringRef package, llvm::StringRef record, llvm::StringRef name);
   
   llvm::StringRef getName() const { return name; }
+  llvm::StringRef getRecordName() const { return record; }
+  llvm::StringRef getPackageName() const { return package; }
+
   std::string mangle() const { return mangled; }
 };
 

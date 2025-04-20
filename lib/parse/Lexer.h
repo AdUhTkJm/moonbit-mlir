@@ -21,7 +21,7 @@ public:
     And, Or,
     Assign, Exclaim, Semicolon, Colon, ColonColon, Arrow,
     Comma, LPar, RPar, LBrak, RBrak, LBrace, RBrace,
-    Dot,
+    Dot, At,
 
     // keywords
     If, Else, Let, While, For, Fn, Return, Struct, Mut,

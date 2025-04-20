@@ -1,10 +1,14 @@
 #include "Identifier.h"
 
-mbt::Identifier::Identifier(llvm::StringRef str):
-  name(str), mangled(mangleImpl()) { }
+mbt::Identifier::Identifier(llvm::StringRef name):
+  name(name), mangled(mangleImpl()) { }
 
-mbt::Identifier::Identifier(std::string str):
-  mbt::Identifier((llvm::StringRef) str) { }
+mbt::Identifier::Identifier(std::string name):
+  mbt::Identifier((llvm::StringRef) name) { }
+
+mbt::Identifier::Identifier(llvm::StringRef package, llvm::StringRef record, llvm::StringRef name):
+  package(package), record(record), name(name), mangled(mangleImpl()) { }
+
 
 std::string mbt::Identifier::mangleImpl() const {
   // Do not mangle main().
